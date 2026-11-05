@@ -1,0 +1,144 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
+    <meta name="theme-color" content="#1B2A49" />
+    <meta name="description" content="Sonit Solar System - CRM e Orçamentos Mobile First" />
+    
+    <!-- PWA Settings -->
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Sonit" />
+    
+    <!-- Icons -->
+    <link rel="apple-touch-icon" href="/logo.png" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+
+    <title>Sonit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- PDF Generation Library (Bundle includes html2canvas) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            },
+            colors: {
+              nior: {
+                navy: '#1B2A49',
+                blue: '#274472',
+                gold: '#C4A462',
+                goldLight: '#E8C885',
+                goldDark: '#9C8040',
+              }
+            },
+            boxShadow: {
+              'soft': '0 10px 40px -10px rgba(0,0,0,0.08)',
+              'glow-gold': '0 0 20px rgba(196, 164, 98, 0.4)',
+              'glow-blue': '0 0 25px rgba(27, 42, 73, 0.3)',
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #F8FAFC;
+        -webkit-tap-highlight-color: transparent;
+        overscroll-behavior-y: none; /* Previne o bounce effect no mobile */
+        
+        /* Bloqueia seleção de texto e menu de contexto (copiar/colar) no corpo todo */
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -khtml-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+
+      /* Libera a seleção e edição APENAS dentro de campos de texto */
+      input, textarea, [contenteditable="true"] {
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        user-select: text;
+        /* Opcional: manter touch-callout default se quiser menu copiar/colar DENTRO do input */
+        -webkit-touch-callout: default; 
+      }
+
+      /* Hide Scrollbar Globally */
+      ::-webkit-scrollbar {
+        display: none;
+        width: 0px;
+        background: transparent;
+      }
+      
+      * {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+      }
+
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+      }
+      .glass-dark {
+        background: rgba(27, 42, 73, 0.85);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      /* PRINT STYLES - IDENTICAL SCREEN COPY */
+      @media print {
+        @page {
+          margin: 0;
+          size: A4 portrait;
+        }
+        body {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          background-color: #ffffff !important;
+          margin: 0;
+          padding: 0;
+        }
+        /* Esconde elementos indesejados na impressão */
+        .no-print {
+          display: none !important;
+        }
+        /* Força backgrounds e cores */
+        * {
+          print-color-adjust: exact !important;
+          -webkit-print-color-adjust: exact !important;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "html2pdf.js": "https://esm.sh/html2pdf.js@^0.14.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
