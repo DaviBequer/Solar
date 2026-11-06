@@ -1,5 +1,7 @@
 # Sonit — regras do projeto
 
+Antes de começar, leia `PENDENCIAS.md`: ali está onde a última conversa parou e o que vem a seguir.
+
 - O app se chama **Sonit** (com um N só). O repositório é `DaviBequer/Solar`.
 - Visual aprovado: layout "Sol a Pino" com as cores do "Patrimônio" (azul-marinho `#14213F`, dourado `#C6A15B`, dourado claro `#F1E6CF`, fundo `#F2F3F6`), fonte Lexend. Os tokens estão em `src/styles.css`.
 - **Toda publicação muda a versão**, e a versão aparece ao lado da logo (`src/ui/chrome.tsx` lê `__APP_VERSION__` do `package.json`). Publique sempre com `npm run publicar`, nunca à mão. Registre o que mudou em `CHANGELOG.md` antes de publicar.
