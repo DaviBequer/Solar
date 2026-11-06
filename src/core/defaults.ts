@@ -28,6 +28,7 @@ export const DEFAULT_SETTINGS: Settings = {
   proposalValidityDays: 10,
   nextProposalNumber: 1,
   lastBackupAt: null,
+  contractTemplate: null,
 };
 
 export function paramsFrom(s: Settings): CalcParams {

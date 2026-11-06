@@ -4,7 +4,7 @@ Resumo da conversa em que o Sonit foi reescrito (5 e 6 de novembro de 2026), par
 
 ## Estado atual
 
-- **v3.0.2 publicada** em https://davibequer.github.io/Solar/ (ramo `gh-pages`, publicado com `npm run publicar`).
+- **v3.0.3 publicada** em https://davibequer.github.io/Solar/ (ramo `gh-pages`, publicado com `npm run publicar`).
 - Reescrita completa a partir do app gerado no Google AI Studio. Nada do código antigo é usado; os dois primeiros commits do histórico (`4e49732` e `5d65523`) ainda contêm o código original.
 - Testes em `npm test`: cálculo, venda, proposta, links, navegação e backup de ponta a ponta.
 - O fluxo inteiro foi testado num navegador em tamanho de celular (importar kits, orçar, criar cliente, gerar PDF, agendar, fechar venda, painel). Esse teste ficou fora do repositório.
@@ -29,6 +29,11 @@ Resumo da conversa em que o Sonit foi reescrito (5 e 6 de novembro de 2026), par
   - **Iluminação pública:** trocar uma conta de R$ 680 de reais para kWh, com taxa de R$ 12, muda a conta de hoje para R$ 692 e a economia sobe R$ 12. Qual é a regra?
   - **Comissão a receber (v3.1):** somar o valor bruto, que é o salvo hoje, ou o líquido?
   - **Proposta antiga:** validade, logo e nome da empresa vêm dos ajustes atuais, não do dia da emissão. Fica assim?
+
+### Contrato em PDF — publicado na v3.0.3
+- O modelo fica fora do repositório, que é público: `modelo-contrato-sonit.txt`, na pasta acima do projeto. Importar em Ajustes em cada aparelho. **Nunca colocar esse arquivo nem dados de cliente no repositório.**
+- Formato do modelo: `#` título, `##` seção, `>` recuo, `|` tabela, `_` linha de assinatura, `{{campo}}` dado automático. Campos aceitos em `FIELDS`, em `src/core/contract.ts`.
+- Em aberto com o Davi: a tabela do modelo diz 15 anos no inversor e 30 nos módulos, e a cláusula 6.2 diz 12 para os dois. Falta decidir e ajustar o modelo. Vale revisão de advogado.
 
 ### v3.1
 - Botão "Adicionar ao Google Agenda" nos compromissos (o aviso chega com o app fechado).

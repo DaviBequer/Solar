@@ -1,5 +1,10 @@
 # Versões
 
+## 3.0.3 — 6 de novembro de 2026
+
+- Contrato em PDF para cada cliente: no orçamento da Ficha, "Gerar contrato" preenche os dados do cliente e do sistema. O app pede CPF ou CNPJ, nascimento e CEP, e guarda na ficha.
+- Modelo de contrato importado em Ajustes. Ele fica só no aparelho e entra no backup.
+
 ## 3.0.2 — 6 de novembro de 2026
 
 - Criar cliente abre a ficha. "Ver proposta em PDF", "Abrir no orçamento" e "Editar dados" não voltam mais para a tela errada.

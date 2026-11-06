@@ -4,6 +4,7 @@ import { Field, NumberField, Sheet, useConfirm, useToast } from '../ui/kit';
 import { useStore } from '../data/store';
 import { brl, num, phoneMask } from '../core/format';
 import { withSettings } from '../core/quote';
+import { templateProblem } from '../core/contract';
 import type { Settings } from '../core/types';
 import { goBack, navigate } from '../router';
 import { parseBackup } from '../data/backup';
@@ -104,6 +105,7 @@ export default function Ajustes() {
   const [sellerPhone, setSellerPhone] = useState('');
   const logoRef = useRef<HTMLInputElement>(null);
   const restoreRef = useRef<HTMLInputElement>(null);
+  const contractRef = useRef<HTMLInputElement>(null);
   const [notifState, setNotifState] = useState(() => ('Notification' in window ? Notification.permission : 'unsupported'));
 
   const openGroup = (g: string) => {
@@ -210,6 +212,27 @@ export default function Ajustes() {
             if (!f) return;
             await updateSettings({ companyLogo: await resizeImage(f) });
             toast('Logo salva');
+          }}
+        />
+
+        <h2 className="section-title">Contrato</h2>
+        <ul className="list">
+          <Row label="Modelo de contrato" sub="Fica só neste aparelho e entra no backup" value={settings.contractTemplate ? 'Importado' : <span className="muted">Não importado</span>} onClick={() => contractRef.current?.click()} />
+        </ul>
+        <input
+          ref={contractRef}
+          type="file"
+          accept=".txt,text/plain"
+          hidden
+          onChange={async (e) => {
+            const f = e.target.files?.[0];
+            e.target.value = '';
+            if (!f) return;
+            const text = await f.text();
+            const problem = templateProblem(text);
+            if (problem) return toast(problem);
+            await updateSettings({ contractTemplate: text });
+            toast('Modelo importado');
           }}
         />
 

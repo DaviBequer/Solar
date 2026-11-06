@@ -54,6 +54,17 @@ export function phoneMask(text: string): string {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
+/** Formata enquanto digita: CPF até 11 dígitos, CNPJ acima disso. */
+export function documentMask(text: string): string {
+  const d = text.replace(/\D/g, '').slice(0, 14);
+  if (d.length <= 11) return d.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3}\.\d{3})(\d)/, '$1.$2').replace(/^(\d{3}\.\d{3}\.\d{3})(\d)/, '$1-$2');
+  return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})(\d{0,2})$/, (_, a, b, c, e, f) => `${a}.${b}.${c}/${e}${f ? `-${f}` : ''}`);
+}
+
+export function cepMask(text: string): string {
+  return text.replace(/\D/g, '').slice(0, 8).replace(/^(\d{5})(\d)/, '$1-$2');
+}
+
 export function phoneDigits(text: string): string {
   return text.replace(/\D/g, '');
 }

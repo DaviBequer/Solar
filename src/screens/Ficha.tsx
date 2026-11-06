@@ -6,13 +6,14 @@ import { isSoldProposal, proposalsOf, saleCommission } from '../core/sale';
 import { mapsUrl, whatsappUrl } from '../core/links';
 import { Attachments } from './attachments';
 import { SaleSheet } from './sale-sheet';
+import { ContractSheet } from './contract-sheet';
 import { LEAD_STATUS_LABEL, PAY_LABEL, PROPOSAL_STATUS_LABEL, SYSTEM_LABEL, TASK_LABEL } from '../core/defaults';
 import { brl, dateShort, initials, phoneDigits, phoneMask, relativeDay, time, uid } from '../core/format';
 import type { Lead, LeadStatus, ProposalStatus } from '../core/types';
 import { goBack, navigate } from '../router';
 import { TaskSheet } from './task-sheet';
 
-type SheetName = 'more' | 'edit' | 'sale' | 'task' | 'proposal' | null;
+type SheetName = 'more' | 'edit' | 'sale' | 'task' | 'proposal' | 'contract' | null;
 
 export default function Ficha({ id }: { id: string }) {
   const { leads, proposals, tasks, updateLead, deleteLead, saveTask, newDraft, openProposalInDraft, setProposalStatus, deleteProposal, closeSale, undoSale } = useStore();
@@ -284,6 +285,8 @@ export default function Ficha({ id }: { id: string }) {
 
       <EditSheet open={sheet === 'edit'} onClose={() => setSheet(null)} lead={lead} />
 
+      <ContractSheet open={sheet === 'contract'} onClose={() => { setSheet(null); setActiveProposal(null); }} lead={lead} proposal={activeProposal} />
+
       <SaleSheet
         open={sheet === 'sale'}
         onClose={() => setSheet(null)}
@@ -317,6 +320,7 @@ export default function Ficha({ id }: { id: string }) {
             )}
             <div className="stack mt-16">
               <button className="btn btn-primary btn-block" onClick={() => { const p = activeProposal; setSheet(null); setActiveProposal(null); navigate(`/proposta/${p.id}`); }}>Ver proposta em PDF</button>
+              <button className="btn btn-secondary btn-block" onClick={() => setSheet('contract')}>Gerar contrato</button>
               <button className="btn btn-secondary btn-block" onClick={() => { const p = activeProposal; openProposalInDraft(p); setSheet(null); setActiveProposal(null); navigate('/orcamento', true); }}>Abrir no orçamento para editar</button>
               <button
                 className="btn btn-danger btn-block"

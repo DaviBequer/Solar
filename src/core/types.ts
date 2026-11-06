@@ -52,6 +52,8 @@ export interface Settings extends CalcParams {
   proposalValidityDays: number;
   nextProposalNumber: number;
   lastBackupAt: string | null;
+  /** Modelo de contrato importado. Fica só no aparelho: o repositório do app é público. */
+  contractTemplate: string | null;
 }
 
 export interface QuoteInput {
@@ -142,6 +144,10 @@ export interface Lead {
   id: string;
   name: string;
   phone: string;
+  /** CPF ou CNPJ, data de nascimento (aaaa-mm-dd) e CEP: pedidos ao gerar o contrato */
+  document?: string;
+  birthDate?: string;
+  cep?: string;
   address: string;
   lat: number | null;
   lng: number | null;
