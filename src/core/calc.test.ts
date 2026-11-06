@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { calculate, installment, inverterLabel } from './calc';
 import { DEFAULT_SETTINGS, newQuoteInput } from './defaults';
 import { parseKitsCsv, parseMoney } from './csv';
-import { monthsText, parseBR } from './format';
+import { backupOverdue, monthsText, parseBR } from './format';
 import type { Kit, QuoteInput } from './types';
 
 const kits: Kit[] = [
@@ -122,6 +122,46 @@ describe('economia e retorno', () => {
     expect(r.monthlySavings).toBe(622);
     expect(monthsText(r.paybackMonths)).toBe('3 anos e 2 meses');
   });
+
+  it('conta em kWh inclui a iluminação pública na conta de hoje', () => {
+    const i = input({ billMode: 'kwh', billValue: 700 });
+    i.params = { ...i.params, lightingFee: 12 };
+    expect(calculate(i, kits).currentBill).toBe(656);
+  });
+
+  it('histórico de 12 meses também inclui a iluminação pública', () => {
+    const i = input({ billMode: 'kwh', monthly: [700, 700, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] });
+    i.params = { ...i.params, lightingFee: 12 };
+    expect(calculate(i, kits).currentBill).toBe(656);
+  });
+
+  it('conta em reais não soma a iluminação de novo', () => {
+    const i = input();
+    i.params = { ...i.params, lightingFee: 12 };
+    expect(calculate(i, kits).currentBill).toBe(680);
+  });
+
+  it('cobra o percentual do Fio B sobre a energia compensada', () => {
+    const i = input();
+    i.params = { ...i.params, fioB: 0.3, fioBPct: 60 };
+    const r = calculate(i, kits);
+    expect(r.fioBCost).toBe(124.04);
+    expect(r.newBill).toBe(170.04);
+    expect(r.monthlySavings).toBe(509.96);
+  });
+
+  it('Fio B zerado não muda a conta nova', () => {
+    const r = calculate(input(), kits);
+    expect(r.fioBCost).toBe(0);
+    expect(r.newBill).toBe(46);
+  });
+
+  it('orçamento salvo antes do Fio B continua calculando', () => {
+    const i = input();
+    const { fioB: _fioB, fioBPct: _fioBPct, ...old } = i.params;
+    const r = calculate({ ...i, params: old as typeof i.params }, kits);
+    expect(r.newBill).toBe(46);
+  });
 });
 
 describe('comissão', () => {
@@ -163,6 +203,24 @@ describe('formatos', () => {
   it('lê números digitados', () => {
     expect(parseBR('1.234,56')).toBe(1234.56);
     expect(parseBR('0,92')).toBe(0.92);
+  });
+  it('ponto seguido de 3 dígitos é milhar', () => {
+    expect(parseBR('23.400')).toBe(23400);
+    expect(parseBR('1.234.567')).toBe(1234567);
+  });
+  it('ponto decimal continua decimal', () => {
+    expect(parseBR('0.92')).toBe(0.92);
+    expect(parseBR('0.920')).toBe(0.92);
+    expect(parseBR('23.4')).toBe(23.4);
+  });
+  it('avisa do backup só depois de 7 dias', () => {
+    const now = new Date(2026, 10, 20, 12);
+    expect(backupOverdue(new Date(2026, 10, 13, 12).toISOString(), true, now)).toBe(false);
+    expect(backupOverdue(new Date(2026, 10, 12, 12).toISOString(), true, now)).toBe(true);
+  });
+  it('sem backup nenhum, só avisa se há dados', () => {
+    expect(backupOverdue(null, true)).toBe(true);
+    expect(backupOverdue(null, false)).toBe(false);
   });
   it('rótulo do inversor numérico ganha a marca', () => {
     expect(inverterLabel('6', 'SOFAR')).toBe('SOFAR 6 kW');

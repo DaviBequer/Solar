@@ -5,7 +5,7 @@ import { NumberField, useToast } from '../ui/kit';
 import { useStore } from '../data/store';
 import { calculate } from '../core/calc';
 import { GRID_LABEL, INSTALLMENT_OPTIONS, PAY_LABEL, ROOF_LABEL, SYSTEM_LABEL } from '../core/defaults';
-import { brl, initials, monthsText, num } from '../core/format';
+import { backupOverdue, brl, initials, monthsText, num } from '../core/format';
 import type { Lead, PayMethod, QuoteInput, SystemType } from '../core/types';
 import { navigate } from '../router';
 import { ClientPicker, InstallSheet, InverterSheet, ModuleSheet, MonthlySheet, PriceSheet } from './orcamento-sheets';
@@ -32,7 +32,7 @@ export function Gauge({ consumption, generation, dark = false }: { consumption: 
 }
 
 export default function Orcamento() {
-  const { draft, setDraft, newDraft, kits, leads, proposals, saveDraftAsProposal } = useStore();
+  const { draft, setDraft, newDraft, kits, leads, proposals, saveDraftAsProposal, settings } = useStore();
   const toast = useToast();
   const [sheet, setSheet] = useState<SheetName>(null);
   const [afterPick, setAfterPick] = useState<null | 'save' | 'proposal'>(null);
@@ -101,6 +101,13 @@ export default function Orcamento() {
     <>
       <TopBar />
       <main className="page with-bar">
+        {backupOverdue(settings.lastBackupAt, leads.length > 0 || proposals.length > 0) && (
+          <div className="notice" role="status" style={{ marginBottom: 12 }}>
+            <AlertTriangle size={16} />
+            <span style={{ flex: 1 }}>{settings.lastBackupAt ? 'Seu último backup tem mais de 7 dias.' : 'Você ainda não fez nenhum backup.'} Os dados ficam só neste aparelho.</span>
+            <button className="link-btn" onClick={() => navigate('/ajustes')}>Fazer backup</button>
+          </div>
+        )}
         <div className="page-head" style={{ paddingTop: 6 }}>
           <h1>{editing ? `Orçamento nº ${editing.number}` : 'Novo orçamento'}</h1>
           {(editing || input.billValue > 0) && (

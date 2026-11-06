@@ -19,11 +19,9 @@ Resumo da conversa em que o Sonit foi reescrito (5 e 6 de novembro de 2026), par
 
 ## Próximos passos (da avaliação de 6/11)
 
-### v3.0.1 — corrigir já
-1. **Ponto de milhar vira centavos.** `parseBR` em `src/core/format.ts` lê "23.400" como 23,4. Tratar ponto seguido de 3 dígitos como milhar, como `parseMoney` em `src/core/csv.ts` já faz. Adicionar teste.
-2. **Fio B (Lei 14.300).** Em 2026 o consumidor paga 60% do Fio B sobre a energia compensada, e o percentual sobe a cada ano. Criar em Ajustes o valor do Fio B (R$/kWh) e o percentual do ano, somar na conta nova em `calculate()` e citar na proposta. Adicionar teste.
-3. **Conta em kWh ignora a iluminação pública.** Em `calculate()`, quando a conta vem em kWh, somar `lightingFee` também em `currentBill`. Adicionar teste.
-4. **Lembrete de backup.** Avisar quando `settings.lastBackupAt` tiver mais de 7 dias.
+### v3.0.1 — feita
+- Ponto de milhar, Fio B, iluminação na conta em kWh e lembrete de backup.
+- **Falta preencher o valor do Fio B** em Ajustes. Ele começa em 0, e até lá as propostas saem sem Fio B. Davi disse que vai resolver depois.
 
 ### v3.1
 - Botão "Adicionar ao Google Agenda" nos compromissos (o aviso chega com o app fechado).

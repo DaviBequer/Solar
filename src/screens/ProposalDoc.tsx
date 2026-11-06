@@ -156,7 +156,9 @@ export const ProposalDoc = forwardRef<HTMLDivElement, Props>(function ProposalDo
           <div style={{ marginTop: 4, fontWeight: 600, color: '#7A5D24' }}>Válida até {dateLong(valid)}</div>
         </div>
         <p style={{ maxWidth: 320, fontSize: 13, lineHeight: 1.45, color: '#5D6475', textAlign: 'right' }}>
-          Valores estimados com tarifa de R$ {num(input.params.tariff, 2)} por kWh. A geração real varia com clima, sombreamento e orientação do telhado.
+          Valores estimados com tarifa de R$ {num(input.params.tariff, 2)} por kWh.
+          {(r.fioBCost ?? 0) > 0 && ` A conta nova inclui ${brl(r.fioBCost ?? 0)} por mês de Fio B (Lei 14.300): ${num(input.params.fioBPct)}% de R$ ${num(input.params.fioB, 3)} por kWh compensado.`}
+          {' '}A geração real varia com clima, sombreamento e orientação do telhado.
         </p>
       </footer>
     </div>

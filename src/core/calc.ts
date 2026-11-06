@@ -111,7 +111,7 @@ export function calculate(input: QuoteInput, kits: Kit[]): QuoteResult {
   const minKwh = GRID_MIN_KWH[input.grid];
   const targetKwh = consumptionKwh * (1 + p.safetyMargin / 100);
   const usesHistory = !!(input.monthly && input.monthly.some((v) => v > 0));
-  const currentBill = input.billMode === 'reais' && !usesHistory ? input.billValue : consumptionKwh * p.tariff;
+  const currentBill = input.billMode === 'reais' && !usesHistory ? input.billValue : consumptionKwh * p.tariff + p.lightingFee;
 
   const hasDemand = consumptionKwh > 0 || !!input.manualModules;
 
@@ -200,7 +200,10 @@ export function calculate(input: QuoteInput, kits: Kit[]): QuoteResult {
   }
 
   const billedAfter = Math.max(minKwh, consumptionKwh - generationKwh);
-  const newBill = round2(hasDemand ? billedAfter * p.tariff + p.lightingFee : 0);
+  // Orçamentos salvos antes da v3.0.1 não têm os campos do Fio B em params.
+  const compensatedKwh = Math.max(0, consumptionKwh - billedAfter);
+  const fioBCost = hasDemand ? compensatedKwh * (p.fioB || 0) * ((p.fioBPct || 0) / 100) : 0;
+  const newBill = round2(hasDemand ? billedAfter * p.tariff + p.lightingFee + fioBCost : 0);
   const monthlySavings = round2(Math.max(0, currentBill - newBill));
   const annualSavings = round2(monthlySavings * 12);
   const paybackMonths = monthlySavings > 0 && totalPaid > 0 ? totalPaid / monthlySavings : null;
@@ -232,6 +235,7 @@ export function calculate(input: QuoteInput, kits: Kit[]): QuoteResult {
     inverterLabel: inverterText,
     generationKwh,
     coverage: consumptionKwh > 0 ? generationKwh / consumptionKwh : 0,
+    fioBCost: round2(fioBCost),
     newBill,
     monthlySavings,
     annualSavings,

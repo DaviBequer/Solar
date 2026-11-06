@@ -14,11 +14,13 @@ export function num(value: number, decimals = 0): string {
   return v.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
-/** Lê números digitados no padrão brasileiro: "1.234,56", "1234,5", "0.92" */
+/** Lê números digitados no padrão brasileiro: "1.234,56", "1234,5", "23.400", "0.92" */
 export function parseBR(text: string): number {
   if (!text) return 0;
   let t = text.trim().replace(/[^\d,.-]/g, '');
   if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.');
+  // Começar em 0 mantém "0.920" como decimal: é assim que uma tarifa seria digitada.
+  else if (/^-?[1-9]\d{0,2}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
   const n = parseFloat(t);
   return Number.isFinite(n) ? n : 0;
 }
@@ -88,6 +90,12 @@ export function startOfDay(d: Date): Date {
 
 export function daysBetween(a: Date, b: Date): number {
   return Math.round((startOfDay(b).getTime() - startOfDay(a).getTime()) / 86400000);
+}
+
+/** Backup com mais de 7 dias. Sem backup nenhum, só avisa se já há dados a perder. */
+export function backupOverdue(lastBackupAt: string | null, hasData: boolean, now = new Date()): boolean {
+  if (!lastBackupAt) return hasData;
+  return daysBetween(new Date(lastBackupAt), now) > 7;
 }
 
 /** "Hoje", "Amanhã", "Ontem", "Sex, 7/11" */

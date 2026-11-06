@@ -16,6 +16,14 @@ const GROUPS: Record<string, { title: string; hint?: string; fields: NumSpec[] }
   tarifa: { title: 'Tarifa de energia', hint: 'Usada para converter a conta em kWh e calcular a economia.', fields: [{ key: 'tariff', label: 'Tarifa (R$ por kWh)', decimals: 3 }] },
   margem: { title: 'Margem de segurança', hint: 'O sistema é dimensionado para gerar esse tanto a mais que o consumo.', fields: [{ key: 'safetyMargin', label: 'Margem', suffix: '%', decimals: 0 }] },
   iluminacao: { title: 'Iluminação pública', hint: 'Valor que continua na conta depois da energia solar. Deixe 0 se não quiser considerar.', fields: [{ key: 'lightingFee', label: 'Valor por mês', prefix: 'R$' }] },
+  fiob: {
+    title: 'Fio B (Lei 14.300)',
+    hint: 'Cobrado sobre a energia compensada. O valor varia por distribuidora e o percentual sobe a cada ano: 60% em 2026. Deixe o valor em 0 se não quiser considerar.',
+    fields: [
+      { key: 'fioB', label: 'Fio B (R$ por kWh)', decimals: 3 },
+      { key: 'fioBPct', label: 'Percentual do ano', suffix: '%', decimals: 0 },
+    ],
+  },
   financiamento: {
     title: 'Financiamento',
     hint: 'IOF e spread são somados ao valor financiado antes do cálculo da parcela.',
@@ -51,7 +59,7 @@ const GROUPS: Record<string, { title: string; hint?: string; fields: NumSpec[] }
   validade: { title: 'Validade da proposta', fields: [{ key: 'proposalValidityDays', label: 'Dias', decimals: 0, suffix: 'dias' }] },
 };
 
-const CALC_KEYS: (keyof CalcParams)[] = ['tariff', 'safetyMargin', 'lightingFee', 'productivity', 'iof', 'spread', 'commissionPct', 'overpriceSharePct', 'taxPct', 'lajeExtra', 'hybridThreshold', 'hybridCostLow', 'hybridCostHigh', 'batteryPrice', 'expansionModulePrice'];
+const CALC_KEYS: (keyof CalcParams)[] = ['tariff', 'safetyMargin', 'lightingFee', 'fioB', 'fioBPct', 'productivity', 'iof', 'spread', 'commissionPct', 'overpriceSharePct', 'taxPct', 'lajeExtra', 'hybridThreshold', 'hybridCostLow', 'hybridCostHigh', 'batteryPrice', 'expansionModulePrice'];
 
 function Row({ label, value, sub, onClick }: { label: string; value?: ReactNode; sub?: string; onClick: () => void }) {
   return (
@@ -204,6 +212,7 @@ export default function Ajustes() {
           <Row label="Tarifa de energia" value={`R$ ${num(settings.tariff, 2)} por kWh`} onClick={() => openGroup('tarifa')} />
           <Row label="Margem de segurança" value={pct(settings.safetyMargin)} onClick={() => openGroup('margem')} />
           <Row label="Iluminação pública" value={settings.lightingFee ? brl(settings.lightingFee) : 'Não considerada'} onClick={() => openGroup('iluminacao')} />
+          <Row label="Fio B" value={settings.fioB ? `R$ ${num(settings.fioB, 3)} por kWh, ${pct(settings.fioBPct)}` : 'Não considerado'} onClick={() => openGroup('fiob')} />
           <Row label="Financiamento" value={`${pct(settings.interestRate)} ao mês`} onClick={() => openGroup('financiamento')} />
           <Row label="Comissão e imposto" value={`${pct(settings.commissionPct)} e ${pct(settings.taxPct)}`} onClick={() => openGroup('comissao')} />
         </ul>

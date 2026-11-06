@@ -1,5 +1,12 @@
 # Versões
 
+## 3.0.1 — 6 de novembro de 2026
+
+- Valor digitado com ponto de milhar agora é lido certo: "23.400" vale 23 mil, não 23,4.
+- Fio B (Lei 14.300) em Ajustes: valor por kWh e percentual do ano. Entra na conta nova e aparece na proposta. Começa em 0, sem efeito até ser preenchido.
+- Conta informada em kWh agora inclui a iluminação pública na conta de hoje.
+- Aviso no Orçamento quando o último backup tem mais de 7 dias, ou quando há dados e nenhum backup.
+
 ## 3.0.0 — 6 de novembro de 2026
 
 Reescrita completa do app, no visual aprovado (layout Sol a Pino, cores azul-marinho e dourado).

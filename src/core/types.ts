@@ -23,6 +23,10 @@ export interface CalcParams {
   tariff: number;
   safetyMargin: number;
   lightingFee: number;
+  /** Fio B em R$ por kWh compensado (Lei 14.300) */
+  fioB: number;
+  /** Percentual do Fio B cobrado no ano */
+  fioBPct: number;
   productivity: number;
   iof: number;
   spread: number;
@@ -102,6 +106,8 @@ export interface QuoteResult {
   inverterLabel: string;
   generationKwh: number;
   coverage: number;
+  /** Parte da conta nova que vem do Fio B. Ausente em orçamentos salvos antes da v3.0.1. */
+  fioBCost?: number;
   newBill: number;
   monthlySavings: number;
   annualSavings: number;
