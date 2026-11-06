@@ -3,7 +3,7 @@
 //      npm run publicar -- minor   -> 3.0.1 -> 3.1.0
 //      npm run publicar -- --manter -> publica sem mudar a versão
 import { execSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdtempSync, cpSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, cpSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -30,13 +30,20 @@ run('git push -q origin HEAD:main');
 const remote = out('git remote get-url origin');
 const tmp = mkdtempSync(join(tmpdir(), 'sonit-pages-'));
 try {
+  // Atualiza o ramo gh-pages com um commit novo por versão (sem reescrever histórico)
+  try {
+    execSync(`git clone -q --depth 1 --branch gh-pages ${remote} ${tmp}`, { stdio: 'pipe' });
+  } catch {
+    run('git init -q -b gh-pages', { cwd: tmp });
+    run(`git remote add origin ${remote}`, { cwd: tmp });
+  }
+  for (const entry of readdirSync(tmp)) if (entry !== '.git') rmSync(join(tmp, entry), { recursive: true, force: true });
   cpSync('dist', tmp, { recursive: true });
   const name = out('git config user.name') || 'Sonit';
   const email = out('git config user.email') || 'sonit@users.noreply.github.com';
-  run('git init -q -b gh-pages', { cwd: tmp });
   run('git add -A', { cwd: tmp });
-  run(`git -c user.name="${name}" -c user.email="${email}" commit -q -m "Site v${version}"`, { cwd: tmp });
-  run(`git push -q -f ${remote} gh-pages`, { cwd: tmp });
+  run(`git -c user.name="${name}" -c user.email="${email}" commit -q --allow-empty -m "Site v${version}"`, { cwd: tmp });
+  run('git push -q origin gh-pages', { cwd: tmp });
 } finally {
   rmSync(tmp, { recursive: true, force: true });
 }
