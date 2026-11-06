@@ -1,5 +1,14 @@
 # Versões
 
+## 3.0.2 — 6 de novembro de 2026
+
+- Criar cliente abre a ficha. "Ver proposta em PDF", "Abrir no orçamento" e "Editar dados" não voltam mais para a tela errada.
+- Proposta recusada não vira a atual nem conta como aberta. Orçamento de venda fechada só é apagado depois de desfazer a venda. Editar a proposta vendida atualiza a comissão calculada.
+- A data e a validade da proposta não mudam mais ao trocar a situação.
+- Restaurar backup agora é tudo ou nada: se o arquivo tiver problema, os dados atuais ficam intactos. A data do último backup só é gravada depois de o arquivo ser entregue.
+- Juros e parcelas padrão chegam ao orçamento novo, e ajustes não alteram orçamento reaberto. Inversor que deixou de servir avisa. Mais e menos módulos não perdem o kit.
+- PDF anexado abre sem imagem quebrada. Cliente só com GPS tem Rota também na Agenda. Rótulo "6kW" corrigido.
+
 ## 3.0.1 — 6 de novembro de 2026
 
 - Valor digitado com ponto de milhar agora é lido certo: "23.400" vale 23 mil, não 23,4.

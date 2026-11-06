@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import type { Lead, Proposal, Settings } from '../core/types';
-import { calculate } from '../core/calc';
+import { proposalContent } from '../core/proposal';
 import { GRID_LABEL, ROOF_LABEL, SYSTEM_LABEL } from '../core/defaults';
 import { brl, dateLong, monthsText, MONTHS, num } from '../core/format';
 import { Gauge } from './Orcamento';
@@ -16,27 +16,7 @@ const row = { display: 'flex', justifyContent: 'space-between', alignItems: 'bas
 export const ProposalDoc = forwardRef<HTMLDivElement, Props>(function ProposalDoc({ proposal, lead, settings }, ref) {
   const r = proposal.result;
   const input = proposal.input;
-  const issued = new Date(proposal.updatedAt);
-  const valid = new Date(issued);
-  valid.setDate(valid.getDate() + settings.proposalValidityDays);
-
-  // A tabela de kits pode ter mudado: reaproveita o preço salvo para simular o financiamento
-  const fin = calculate({ ...input, pricing: { ...input.pricing, mode: 'fechado', closedPrice: r.finalPrice }, payment: { ...input.payment, method: 'financiado', installments: input.payment.installments || 72 } }, []);
-
-  const options: { key: string; label: string; value: string; on: boolean }[] = [
-    { key: 'vista', label: 'À vista', value: brl(r.finalPrice), on: input.payment.method === 'vista' },
-  ];
-  if (input.payment.method === 'entrada' && r.installmentValue > 0) {
-    options.push({ key: 'entrada', label: 'Com entrada', value: `${brl(r.downPayment)} + ${r.installments}× ${brl(r.installmentValue)}`, on: true });
-  }
-  if (fin.installmentValue > 0) {
-    options.push({ key: 'fin', label: 'Financiado', value: `${fin.installments}× ${brl(fin.installmentValue)}`, on: input.payment.method === 'financiado' });
-  }
-
-  const paybackFrac = r.paybackMonths !== null ? r.paybackMonths / 300 : null;
-  const paidAt = r.paybackMonths !== null ? new Date(issued.getFullYear(), issued.getMonth() + Math.round(r.paybackMonths), 1) : null;
-  const years = Array.from({ length: 6 }, (_, i) => issued.getFullYear() + i * 5);
-  const rate = input.payment.interestRate;
+  const { issued, valid, options, rate, installmentBelowBill, paybackFrac, paidAt, years, fioBNote } = proposalContent(proposal, settings);
 
   return (
     <div className="doc" ref={ref}>
@@ -121,7 +101,7 @@ export const ProposalDoc = forwardRef<HTMLDivElement, Props>(function ProposalDo
           {options.length > 1 && (
             <p style={{ marginTop: 8, fontSize: 14, color: '#5D6475', lineHeight: 1.45 }}>
               Taxa de {num(rate, 2)}% ao mês, sujeita à aprovação de crédito.
-              {input.payment.method !== 'vista' && r.installmentValue > 0 && r.installmentValue < r.currentBill ? ' A parcela é menor que a conta de hoje.' : ''}
+              {installmentBelowBill ? ' A parcela é menor que a conta de hoje.' : ''}
             </p>
           )}
         </section>
@@ -157,7 +137,7 @@ export const ProposalDoc = forwardRef<HTMLDivElement, Props>(function ProposalDo
         </div>
         <p style={{ maxWidth: 320, fontSize: 13, lineHeight: 1.45, color: '#5D6475', textAlign: 'right' }}>
           Valores estimados com tarifa de R$ {num(input.params.tariff, 2)} por kWh.
-          {(r.fioBCost ?? 0) > 0 && ` A conta nova inclui ${brl(r.fioBCost ?? 0)} por mês de Fio B (Lei 14.300): ${num(input.params.fioBPct)}% de R$ ${num(input.params.fioB, 3)} por kWh compensado.`}
+          {fioBNote && ` ${fioBNote}`}
           {' '}A geração real varia com clima, sombreamento e orientação do telhado.
         </p>
       </footer>

@@ -1,30 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, X } from 'lucide-react';
-import { activeLayers, popLayer, pushLayer } from '../router';
+import { useLayer } from '../router';
 import { num, parseBR } from '../core/format';
-
-/** Fecha a camada com o botão voltar do celular */
-export function useLayer(open: boolean, onClose: () => void) {
-  const closeRef = useRef(onClose);
-  closeRef.current = onClose;
-  useEffect(() => {
-    if (!open) return;
-    const token = pushLayer();
-    let popped = false;
-    const onPop = () => {
-      if (!activeLayers().includes(token)) {
-        popped = true;
-        closeRef.current();
-      }
-    };
-    window.addEventListener('popstate', onPop);
-    return () => {
-      window.removeEventListener('popstate', onPop);
-      if (!popped) popLayer();
-    };
-  }, [open]);
-}
 
 export function Sheet({ open, onClose, title, children, action }: { open: boolean; onClose: () => void; title: string; children: ReactNode; action?: ReactNode }) {
   useLayer(open, onClose);

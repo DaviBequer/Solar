@@ -2,6 +2,7 @@ import type { Kit, Lead, Proposal, Task, Settings, QuoteInput, LeadStatus, Propo
 import { DEFAULT_SETTINGS, newQuoteInput, paramsFrom } from '../core/defaults';
 import { calculate } from '../core/calc';
 import { uid } from '../core/format';
+import * as db from './db';
 
 export interface BackupFile {
   id: string;
@@ -21,18 +22,47 @@ export interface Backup {
   files: BackupFile[];
 }
 
-export function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result as string);
-    r.onerror = () => reject(r.error);
-    r.readAsDataURL(blob);
-  });
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = '';
+  // Em pedaços: String.fromCharCode com a foto inteira estoura a pilha.
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return `data:${blob.type || 'application/octet-stream'};base64,${btoa(binary)}`;
 }
 
-export async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
+async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
   const res = await fetch(dataUrl);
   return res.blob();
+}
+
+/** Monta o backup com tudo o que está no aparelho. Não marca lastBackupAt: o arquivo ainda não foi entregue. */
+export async function buildBackup(settings: Settings): Promise<Backup> {
+  const [kits, leads, proposals, tasks, stored] = await Promise.all([
+    db.getAll<Kit>('kits'),
+    db.getAll<Lead>('leads'),
+    db.getAll<Proposal>('proposals'),
+    db.getAll<Task>('tasks'),
+    db.getAll<db.StoredFile>('files'),
+  ]);
+  const files = await Promise.all(stored.map(async (f) => ({ id: f.id, type: f.blob.type, dataUrl: await blobToDataUrl(f.blob) })));
+  const exportedAt = new Date().toISOString();
+  return { app: 'sonit', version: 3, exportedAt, settings: { ...settings, lastBackupAt: exportedAt }, kits, leads, proposals, tasks, files };
+}
+
+/** Lê tudo primeiro e grava numa só transação: se algo falhar, os dados atuais continuam intactos. */
+export async function restoreBackup(b: Backup): Promise<Settings> {
+  const files = await Promise.all(b.files.map(async (f) => ({ id: f.id, blob: await dataUrlToBlob(f.dataUrl) })));
+  const settings = { ...DEFAULT_SETTINGS, ...b.settings };
+  const rows = { kits: b.kits, leads: b.leads, proposals: b.proposals, tasks: b.tasks, files };
+  await db.transact([...(Object.keys(rows) as (keyof typeof rows)[]), 'kv'], (tx) => {
+    for (const [store, list] of Object.entries(rows)) {
+      const os = tx.objectStore(store);
+      os.clear();
+      for (const row of list) os.put(row);
+    }
+    tx.objectStore('kv').put(settings, 'settings');
+  });
+  return settings;
 }
 
 /* ---------- Backup do app antigo (AI Studio) ---------- */
@@ -184,6 +214,8 @@ export function parseBackup(text: string): Backup {
     throw new Error('O arquivo não é um backup válido.');
   }
   if (data?.app === 'sonit' && data.version === 3) {
+    const complete = [data.kits, data.leads, data.proposals, data.tasks, data.files].every(Array.isArray);
+    if (!complete) throw new Error('Este backup está incompleto. Nada foi alterado.');
     return { ...data, settings: { ...DEFAULT_SETTINGS, ...data.settings } } as Backup;
   }
   if (isLegacyBackup(data)) return convertLegacy(data);

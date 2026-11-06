@@ -4,9 +4,9 @@ Resumo da conversa em que o Sonit foi reescrito (5 e 6 de novembro de 2026), par
 
 ## Estado atual
 
-- **v3.0.0 publicada** em https://davibequer.github.io/Solar/ (ramo `gh-pages`, publicado com `npm run publicar`).
+- **v3.0.2 publicada** em https://davibequer.github.io/Solar/ (ramo `gh-pages`, publicado com `npm run publicar`).
 - Reescrita completa a partir do app gerado no Google AI Studio. Nada do código antigo é usado; os dois primeiros commits do histórico (`4e49732` e `5d65523`) ainda contêm o código original.
-- 21 testes passando (`npm test`): motor de cálculo e importação de backup.
+- Testes em `npm test`: cálculo, venda, proposta, links, navegação e backup de ponta a ponta.
 - O fluxo inteiro foi testado num navegador em tamanho de celular (importar kits, orçar, criar cliente, gerar PDF, agendar, fechar venda, painel). Esse teste ficou fora do repositório.
 
 ## Decisões já tomadas
@@ -23,6 +23,13 @@ Resumo da conversa em que o Sonit foi reescrito (5 e 6 de novembro de 2026), par
 - Ponto de milhar, Fio B, iluminação na conta em kWh e lembrete de backup.
 - **Falta preencher o valor do Fio B** em Ajustes. Ele começa em 0, e até lá as propostas saem sem Fio B. Davi disse que vai resolver depois.
 
+### v3.0.2 — publicada
+- Correções da revisão de arquitetura de 6/11: navegação com folhas (`src/router.ts`), regras da venda (`src/core/sale.ts`), conteúdo da proposta (`src/core/proposal.ts`), backup tudo ou nada (`src/data/backup.ts`), edição do orçamento (`src/core/quote.ts`), anexos (`src/screens/attachments.tsx`) e links (`src/core/links.ts`).
+- Decisões que faltam com o Davi:
+  - **Iluminação pública:** trocar uma conta de R$ 680 de reais para kWh, com taxa de R$ 12, muda a conta de hoje para R$ 692 e a economia sobe R$ 12. Qual é a regra?
+  - **Comissão a receber (v3.1):** somar o valor bruto, que é o salvo hoje, ou o líquido?
+  - **Proposta antiga:** validade, logo e nome da empresa vêm dos ajustes atuais, não do dia da emissão. Fica assim?
+
 ### v3.1
 - Botão "Adicionar ao Google Agenda" nos compromissos (o aviso chega com o app fechado).
 - Comissão a receber somada no Painel.
@@ -32,8 +39,7 @@ Resumo da conversa em que o Sonit foi reescrito (5 e 6 de novembro de 2026), par
 - PDF com texto (hoje é imagem via html2canvas).
 - Teste de ponta a ponta com Playwright dentro do repositório, rodando no `publicar`.
 - Marcas de módulo e inversor editáveis em Ajustes.
-- Folhas fecham com Esc e recebem o foco ao abrir.
-- Dividir `src/screens/Ficha.tsx` (504 linhas).
+- Folhas fecham com Esc e recebem o foco ao abrir (entra em `useLayer`, em `src/router.ts`).
 
 ## Em aberto com o Davi
 

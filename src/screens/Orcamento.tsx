@@ -6,6 +6,7 @@ import { useStore } from '../data/store';
 import { calculate } from '../core/calc';
 import { GRID_LABEL, INSTALLMENT_OPTIONS, PAY_LABEL, ROOF_LABEL, SYSTEM_LABEL } from '../core/defaults';
 import { backupOverdue, brl, initials, monthsText, num } from '../core/format';
+import { stepModules } from '../core/quote';
 import type { Lead, PayMethod, QuoteInput, SystemType } from '../core/types';
 import { navigate } from '../router';
 import { ClientPicker, InstallSheet, InverterSheet, ModuleSheet, MonthlySheet, PriceSheet } from './orcamento-sheets';
@@ -52,11 +53,7 @@ export default function Orcamento() {
   const setSystem = (t: SystemType) => set({ systemType: t, manualModules: null, manualInverter: null, inverterBrand: t === 'hibrido' || t === 'bateria' ? 'SAJ' : input.inverterBrand });
   const setPay = (patch: Partial<QuoteInput['payment']>) => set({ payment: { ...input.payment, ...patch } });
 
-  const moduleStep = (delta: number) => {
-    const current = input.manualModules ?? r.modules;
-    const next = Math.max(1, current + delta);
-    set({ manualModules: next, manualInverter: null });
-  };
+  const moduleStep = (delta: number) => set(stepModules(input, r, delta));
 
   async function persist(goToProposal: boolean) {
     if (!draft.leadId) {
@@ -78,14 +75,12 @@ export default function Orcamento() {
     setAfterPick(null);
     close();
     if (intent) {
-      setTimeout(async () => {
-        setBusy(true);
-        const p = await saveDraftAsProposal();
-        setBusy(false);
-        if (!p) return;
-        if (intent === 'proposal') navigate(`/proposta/${p.id}`);
-        else toast('Orçamento salvo');
-      }, 50);
+      setBusy(true);
+      const p = await saveDraftAsProposal();
+      setBusy(false);
+      if (!p) return;
+      if (intent === 'proposal') navigate(`/proposta/${p.id}`);
+      else toast('Orçamento salvo');
     }
   }
 
@@ -210,7 +205,7 @@ export default function Orcamento() {
                 <span className="s">Inversor</span>
                 <span className="t">
                   {r.inverterLabel || (consumption > 0 ? 'Sem kit na tabela' : 'Automático')}{' '}
-                  {r.kit && <span className="pill tag" style={{ marginLeft: 4 }}>{input.manualInverter ? 'escolhido' : 'pela tabela'}</span>}
+                  {r.kit && <span className="pill tag" style={{ marginLeft: 4 }}>{input.manualInverter === r.kit.inverter ? 'escolhido' : 'pela tabela'}</span>}
                 </span>
               </span>
               <ChevronRight size={18} className="chev" />

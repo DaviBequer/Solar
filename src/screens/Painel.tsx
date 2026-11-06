@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { TopBar } from '../ui/chrome';
-import { proposalsOf, useStore } from '../data/store';
+import { useStore } from '../data/store';
+import { pipeline as openPipeline, salesOf } from '../core/sale';
 import { brl, cap, MONTHS, num } from '../core/format';
 import { navigate } from '../router';
 
@@ -13,16 +14,7 @@ export default function Painel() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
 
-  const sales = useMemo(
-    () =>
-      leads
-        .filter((l) => l.status === 'vendido' && l.soldAt)
-        .map((l) => {
-          const p = proposals.find((x) => x.id === l.soldProposalId) ?? proposalsOf(proposals, l.id)[0];
-          return { lead: l, date: new Date(l.soldAt!), value: p?.result.finalPrice ?? 0, commission: l.commission?.value ?? p?.result.commission.gross ?? 0 };
-        }),
-    [leads, proposals],
-  );
+  const sales = useMemo(() => salesOf(leads, proposals), [leads, proposals]);
 
   const byMonth = useMemo(() => {
     const arr = Array(12).fill(0) as number[];
@@ -37,9 +29,7 @@ export default function Painel() {
   const goal = settings.monthlyGoal;
   const goalPct = goal > 0 ? Math.min(1, sold / goal) : 0;
 
-  const negotiating = leads.filter((l) => l.status === 'negociando');
-  const pipeline = negotiating.reduce((sum, l) => sum + (proposalsOf(proposals, l.id)[0]?.result.finalPrice ?? 0), 0);
-  const withProposal = negotiating.filter((l) => proposalsOf(proposals, l.id).length > 0).length;
+  const { total: pipeline, count: withProposal } = openPipeline(leads, proposals);
 
   const counts = { novo: 0, negociando: 0, vendido: 0, perdido: 0 };
   for (const l of leads) counts[l.status]++;

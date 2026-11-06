@@ -88,6 +88,14 @@ export async function clear(store: StoreName): Promise<void> {
   return done(tx);
 }
 
+/** Grava em várias tabelas numa só transação: ou tudo entra, ou nada muda. */
+export async function transact(stores: StoreName[], write: (tx: IDBTransaction) => void): Promise<void> {
+  const db = await open();
+  const tx = db.transaction(stores, 'readwrite');
+  write(tx);
+  return done(tx);
+}
+
 export interface StoredFile {
   id: string;
   blob: Blob;

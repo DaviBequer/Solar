@@ -3,6 +3,7 @@ import { ChevronLeft, Download, Pencil, Send } from 'lucide-react';
 import { useStore } from '../data/store';
 import { useToast } from '../ui/kit';
 import { goBack, navigate } from '../router';
+import { whatsappUrl } from '../core/links';
 import { ProposalDoc } from './ProposalDoc';
 
 async function makePdf(source: HTMLElement): Promise<Blob> {
@@ -117,7 +118,7 @@ export default function Proposta({ id }: { id: string }) {
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 4000);
         const phone = lead?.phone.replace(/\D/g, '');
-        if (phone) window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(text)}`, '_blank');
+        if (phone) window.open(whatsappUrl(phone, text), '_blank');
         toast('PDF baixado. Anexe na conversa do WhatsApp.');
         await markSent();
       }

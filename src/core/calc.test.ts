@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { calculate, installment, inverterLabel } from './calc';
 import { DEFAULT_SETTINGS, newQuoteInput } from './defaults';
 import { parseKitsCsv, parseMoney } from './csv';
+import { stepModules, withSettings } from './quote';
 import { backupOverdue, monthsText, parseBR } from './format';
 import type { Kit, QuoteInput } from './types';
 
@@ -61,6 +62,40 @@ describe('dimensionamento e kit', () => {
     const monthly = [700, 800, 0, 0, 0, 0, 0, 0, 0, 0, 0, 900];
     const r = calculate(input({ monthly, billMode: 'kwh' }), kits);
     expect(r.consumptionKwh).toBe(800);
+  });
+});
+
+describe('edição do orçamento', () => {
+  it('inversor escolhido que deixou de servir avisa em vez de parecer escolhido', () => {
+    const i = input({ manualInverter: 'SAJ 6K' });
+    i.params = { ...i.params, safetyMargin: 40 };
+    const r = calculate(i, kits);
+    expect(r.kit?.id).toBe('d');
+    expect(r.warnings[0]).toMatch(/SAJ 6K/);
+  });
+
+  it('mais um e menos um módulo voltam ao mesmo kit, mesmo vindo de outra potência', () => {
+    let i = input({ billValue: 1100 });
+    const first = calculate(i, kits);
+    expect(first.kit?.id).toBe('e');
+    i = { ...i, ...stepModules(i, first, 1) };
+    i = { ...i, ...stepModules(i, calculate(i, kits), -1) };
+    const r = calculate(i, kits);
+    expect(r.kit?.id).toBe('e');
+    expect(r.finalPrice).toBe(36000);
+  });
+
+  it('ajuste salvo chega ao rascunho novo, inclusive juros padrão', () => {
+    const d = { proposalId: null, input: input() };
+    const next = withSettings(d, { interestRate: 1.59, iof: 2, tariff: 1 });
+    expect(next.input.payment.interestRate).toBe(1.59);
+    expect(next.input.params.iof).toBe(2);
+    expect(next.input.params.tariff).toBe(1);
+  });
+
+  it('ajuste salvo não altera orçamento reaberto', () => {
+    const d = { proposalId: 'p1', input: input() };
+    expect(withSettings(d, { tariff: 1 })).toBe(d);
   });
 });
 
@@ -225,5 +260,6 @@ describe('formatos', () => {
   it('rótulo do inversor numérico ganha a marca', () => {
     expect(inverterLabel('6', 'SOFAR')).toBe('SOFAR 6 kW');
     expect(inverterLabel('5,5', '')).toBe('5,5 kW');
+    expect(inverterLabel('6kW', 'SOFAR')).toBe('SOFAR 6 kW');
   });
 });

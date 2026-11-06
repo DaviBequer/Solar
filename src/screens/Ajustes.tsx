@@ -3,7 +3,8 @@ import { Bell, ChevronLeft, ChevronRight, ImagePlus } from 'lucide-react';
 import { Field, NumberField, Sheet, useConfirm, useToast } from '../ui/kit';
 import { useStore } from '../data/store';
 import { brl, num, phoneMask } from '../core/format';
-import type { CalcParams, Settings } from '../core/types';
+import { withSettings } from '../core/quote';
+import type { Settings } from '../core/types';
 import { goBack, navigate } from '../router';
 import { parseBackup } from '../data/backup';
 import { askNotificationPermission } from '../reminders';
@@ -58,8 +59,6 @@ const GROUPS: Record<string, { title: string; hint?: string; fields: NumSpec[] }
   meta: { title: 'Meta de vendas por mês', fields: [{ key: 'monthlyGoal', label: 'Meta', prefix: 'R$' }] },
   validade: { title: 'Validade da proposta', fields: [{ key: 'proposalValidityDays', label: 'Dias', decimals: 0, suffix: 'dias' }] },
 };
-
-const CALC_KEYS: (keyof CalcParams)[] = ['tariff', 'safetyMargin', 'lightingFee', 'fioB', 'fioBPct', 'productivity', 'iof', 'spread', 'commissionPct', 'overpriceSharePct', 'taxPct', 'lajeExtra', 'hybridThreshold', 'hybridCostLow', 'hybridCostHigh', 'batteryPrice', 'expansionModulePrice'];
 
 function Row({ label, value, sub, onClick }: { label: string; value?: ReactNode; sub?: string; onClick: () => void }) {
   return (
@@ -116,34 +115,41 @@ export default function Ajustes() {
 
   async function saveGroup() {
     await updateSettings(vals);
-    const calc: Partial<CalcParams> = {};
-    for (const k of CALC_KEYS) if (k in vals) (calc as Record<string, number>)[k] = vals[k] as number;
-    if (Object.keys(calc).length) setDraft((d) => ({ ...d, input: { ...d.input, params: { ...d.input.params, ...calc } } }));
+    setDraft((d) => withSettings(d, vals));
     setGroup(null);
     toast('Ajuste salvo');
   }
 
   async function doExport() {
-    const b = await exportBackup();
-    const json = JSON.stringify(b);
-    const d = new Date();
-    const name = `sonit-backup-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.json`;
-    const file = new File([json], name, { type: 'application/json' });
-    if (navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: 'Backup do Sonit' });
-        return;
-      } catch {
-        /* se cancelar, baixa o arquivo */
+    try {
+      const b = await exportBackup();
+      const json = JSON.stringify(b);
+      const d = new Date();
+      const name = `sonit-backup-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.json`;
+      const file = new File([json], name, { type: 'application/json' });
+      let shared = false;
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: 'Backup do Sonit' });
+          shared = true;
+        } catch {
+          /* se cancelar, baixa o arquivo */
+        }
       }
+      if (!shared) {
+        const url = URL.createObjectURL(file);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        toast('Backup baixado');
+      }
+      // Só agora: se a geração falhar, o aviso de 7 dias continua aparecendo
+      await updateSettings({ lastBackupAt: b.exportedAt });
+    } catch {
+      toast('Não foi possível gerar o backup');
     }
-    const url = URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-    toast('Backup baixado');
   }
 
   async function doRestore(f: File) {

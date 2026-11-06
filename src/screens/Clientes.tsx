@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { Plus, Search, Share2 } from 'lucide-react';
 import { TopBar } from '../ui/chrome';
 import { useToast } from '../ui/kit';
-import { lastActivity, nextTaskOf, proposalsOf, useStore } from '../data/store';
+import { lastActivity, nextTaskOf, useStore } from '../data/store';
+import { currentProposal, pipeline } from '../core/sale';
 import { LEAD_STATUS_LABEL, SYSTEM_LABEL, TASK_LABEL } from '../core/defaults';
 import { brl, dateShort, daysBetween, initials, relativeDay, time } from '../core/format';
 import type { Lead, LeadStatus } from '../core/types';
@@ -37,10 +38,7 @@ export default function Clientes() {
     return leads
       .filter((l) => (searching ? true : l.status === filter))
       .filter((l) => !t || l.name.toLowerCase().includes(t) || (digits.length > 2 && l.phone.replace(/\D/g, '').includes(digits)))
-      .map((l) => {
-        const props = proposalsOf(proposals, l.id);
-        return { lead: l, last: props[0] ?? null, next: nextTaskOf(tasks, l.id), activity: lastActivity(l, proposals, tasks) };
-      })
+      .map((l) => ({ lead: l, last: currentProposal(proposals, l.id), next: nextTaskOf(tasks, l.id), activity: lastActivity(l, proposals, tasks) }))
       .sort((a, b) => {
         const an = a.next ? new Date(a.next.date).getTime() : Infinity;
         const bn = b.next ? new Date(b.next.date).getTime() : Infinity;
@@ -49,10 +47,7 @@ export default function Clientes() {
       });
   }, [leads, proposals, tasks, q, filter]);
 
-  const openTotal = useMemo(
-    () => leads.filter((l) => l.status === 'negociando').reduce((sum, l) => sum + (proposalsOf(proposals, l.id)[0]?.result.finalPrice ?? 0), 0),
-    [leads, proposals],
-  );
+  const openTotal = useMemo(() => pipeline(leads, proposals).total, [leads, proposals]);
 
   async function share() {
     const list = rows.map((r) => r.lead);

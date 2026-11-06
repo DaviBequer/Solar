@@ -1,5 +1,8 @@
+import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
-import { parseBackup } from './backup';
+import { buildBackup, parseBackup, restoreBackup, type Backup } from './backup';
+import * as db from './db';
+import { DEFAULT_SETTINGS } from '../core/defaults';
 
 const legacy = {
   version: 1,
@@ -57,5 +60,36 @@ describe('backup do app antigo', () => {
   it('recusa arquivo que não é backup', () => {
     expect(() => parseBackup('{"a":1}')).toThrow();
     expect(() => parseBackup('texto')).toThrow();
+  });
+});
+
+describe('backup atual', () => {
+  const kit = { id: 'k1', gm: 890, panel585: 0, panel610: 12, panel700: 0, inverter: '6', price: 22900 };
+  const atual = (over: Partial<Backup> = {}): Backup => ({ app: 'sonit', version: 3, exportedAt: '2026-11-06T12:00:00.000Z', settings: { ...DEFAULT_SETTINGS, companyName: 'Minha Solar' }, kits: [kit], leads: [], proposals: [], tasks: [], files: [], ...over });
+
+  it('recusa backup incompleto antes de mexer em qualquer dado', () => {
+    const { files: _files, ...sem } = atual();
+    expect(() => parseBackup(JSON.stringify(sem))).toThrow(/incompleto/);
+  });
+
+  it('exportar e restaurar devolve os mesmos dados, com os anexos', async () => {
+    await restoreBackup(atual({ files: [{ id: 'f1', type: 'text/plain', dataUrl: 'data:text/plain;base64,b2k=' }] }));
+    const exported = parseBackup(JSON.stringify(await buildBackup({ ...DEFAULT_SETTINGS, companyName: 'Minha Solar' })));
+    expect(exported.files[0].dataUrl).toBe('data:text/plain;base64,b2k=');
+
+    await restoreBackup(atual({ kits: [], files: [] }));
+    expect(await db.getAll('files')).toHaveLength(0);
+
+    const settings = await restoreBackup(exported);
+    expect(settings.companyName).toBe('Minha Solar');
+    expect(await db.getAll('kits')).toEqual([kit]);
+    const [file] = await db.getAll<db.StoredFile>('files');
+    expect(await file.blob.text()).toBe('oi');
+  });
+
+  it('anexo ilegível não apaga nada', async () => {
+    await restoreBackup(atual());
+    await expect(restoreBackup(atual({ kits: [], files: [{ id: 'f1', type: 'image/png', dataUrl: 'nao-e-dado' }] }))).rejects.toThrow();
+    expect(await db.getAll('kits')).toEqual([kit]);
   });
 });

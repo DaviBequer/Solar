@@ -31,7 +31,7 @@ export function isNumericInverter(inv: string): boolean {
 export function inverterLabel(inv: string, brand: string): string {
   if (!inv) return '';
   if (isNumericInverter(inv)) {
-    const n = inv.replace(/k|kw/gi, '').trim().replace('.', ',');
+    const n = inv.replace(/kw|k/gi, '').trim().replace('.', ',');
     return brand ? `${brand} ${n} kW` : `${n} kW`;
   }
   return inv;
@@ -101,6 +101,9 @@ function pickKit(input: QuoteInput, kits: Kit[], targetKwh: number): KitPick {
   }
   const kit = pool[0] ?? null;
   if (kit) panelW = kitPanel(kit, panelW);
+  if (kit && input.manualInverter && kit.inverter !== input.manualInverter) {
+    warning = warning ?? `O inversor ${input.manualInverter} não atende esse sistema. Usei o indicado pela tabela.`;
+  }
   return { kit, panelW, available, warning };
 }
 

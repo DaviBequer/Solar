@@ -1,36 +1,32 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Bell, Camera, ChevronLeft, ChevronRight, LocateFixed, MapPin, MessageCircle, MoreHorizontal, Navigation, Phone, Plus, Share2, Sun, Trash2, X } from 'lucide-react';
-import { Field, NumberField, Sheet, useConfirm, useLayer, useToast } from '../ui/kit';
-import { nextTaskOf, proposalsOf, useStore } from '../data/store';
+import { useEffect, useMemo, useState } from 'react';
+import { Bell, ChevronLeft, ChevronRight, LocateFixed, MapPin, MessageCircle, MoreHorizontal, Navigation, Phone, Plus, Share2, Sun, Trash2 } from 'lucide-react';
+import { Field, Sheet, useConfirm, useToast } from '../ui/kit';
+import { nextTaskOf, useStore } from '../data/store';
+import { isSoldProposal, proposalsOf, saleCommission } from '../core/sale';
+import { mapsUrl, whatsappUrl } from '../core/links';
+import { Attachments } from './attachments';
+import { SaleSheet } from './sale-sheet';
 import { LEAD_STATUS_LABEL, PAY_LABEL, PROPOSAL_STATUS_LABEL, SYSTEM_LABEL, TASK_LABEL } from '../core/defaults';
 import { brl, dateShort, initials, phoneDigits, phoneMask, relativeDay, time, uid } from '../core/format';
-import type { Lead, LeadStatus, Proposal, ProposalStatus } from '../core/types';
+import type { Lead, LeadStatus, ProposalStatus } from '../core/types';
 import { goBack, navigate } from '../router';
 import { TaskSheet } from './task-sheet';
 
 type SheetName = 'more' | 'edit' | 'sale' | 'task' | 'proposal' | null;
 
-function mapsUrl(lead: Lead): string | null {
-  if (lead.address.trim()) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.address)}`;
-  if (lead.lat !== null && lead.lng !== null) return `https://www.google.com/maps/search/?api=1&query=${lead.lat},${lead.lng}`;
-  return null;
-}
-
 export default function Ficha({ id }: { id: string }) {
-  const store = useStore();
-  const { leads, proposals, tasks, updateLead, deleteLead, saveTask, newDraft, openProposalInDraft, setProposalStatus, deleteProposal, closeSale, addAttachment, removeAttachment } = store;
+  const { leads, proposals, tasks, updateLead, deleteLead, saveTask, newDraft, openProposalInDraft, setProposalStatus, deleteProposal, closeSale, undoSale } = useStore();
   const toast = useToast();
   const confirm = useConfirm();
   const lead = leads.find((l) => l.id === id);
   const [sheet, setSheet] = useState<SheetName>(null);
   const [editingTask, setEditingTask] = useState<string | null>(null);
-  const [activeProposal, setActiveProposal] = useState<Proposal | null>(null);
+  const [activeProposalId, setActiveProposal] = useState<string | null>(null);
   const [record, setRecord] = useState('');
   const [locating, setLocating] = useState(false);
-  const [viewer, setViewer] = useState<{ id: string; url: string } | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const props = useMemo(() => proposalsOf(proposals, id), [proposals, id]);
+  const activeProposal = props.find((p) => p.id === activeProposalId) ?? null;
   const next = useMemo(() => nextTaskOf(tasks, id), [tasks, id]);
   const history = useMemo(() => tasks.filter((t) => t.leadId === id && t.done).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3), [tasks, id]);
 
@@ -61,8 +57,7 @@ export default function Ficha({ id }: { id: string }) {
     if (lead.status === 'vendido') {
       const ok = await confirm({ title: 'Desfazer a venda?', message: 'A comissão e a data da venda serão apagadas.', confirm: 'Desfazer', danger: true });
       if (!ok) return;
-      if (lead.soldProposalId) await setProposalStatus(lead.soldProposalId, 'enviado');
-      await updateLead(lead.id, { status: s, soldAt: null, soldProposalId: null, commission: null });
+      await undoSale(lead.id, s);
       return;
     }
     await updateLead(lead.id, { status: s });
@@ -129,12 +124,8 @@ export default function Ficha({ id }: { id: string }) {
     }
   }
 
-  async function openAttachment(attId: string) {
-    const url = await store.fileUrl(attId);
-    if (url) setViewer({ id: attId, url });
-  }
-
   const statusOrder: LeadStatus[] = ['novo', 'negociando', 'vendido', 'perdido'];
+  const commission = lead.status === 'vendido' ? saleCommission(lead, proposals) : null;
   const taskForSheet = editingTask ? tasks.find((t) => t.id === editingTask) ?? null : null;
 
   return (
@@ -162,20 +153,20 @@ export default function Ficha({ id }: { id: string }) {
           ))}
         </div>
 
-        {lead.status === 'vendido' && lead.commission && (
+        {commission && (
           <section className="card pad mt-12" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ flex: 1 }}>
               <div className="muted" style={{ fontSize: 12 }}>Vendido em {lead.soldAt ? new Date(lead.soldAt).toLocaleDateString('pt-BR') : '—'}</div>
-              <div style={{ fontSize: 15, fontWeight: 600 }}>Comissão {brl(lead.commission.value)}{lead.commission.manual ? ' (manual)' : ''}</div>
+              <div style={{ fontSize: 15, fontWeight: 600 }}>Comissão {brl(commission.value)}{commission.manual ? ' (manual)' : ''}</div>
             </div>
-            <button className={`btn btn-sm ${lead.commission.paid ? 'btn-gold' : 'btn-secondary'}`} aria-pressed={lead.commission.paid} onClick={() => updateLead(lead.id, { commission: { ...lead.commission!, paid: !lead.commission!.paid } })}>
-              {lead.commission.paid ? 'Recebida' : 'A receber'}
+            <button className={`btn btn-sm ${commission.paid ? 'btn-gold' : 'btn-secondary'}`} aria-pressed={commission.paid} onClick={() => updateLead(lead.id, { commission: { ...commission, paid: !commission.paid } })}>
+              {commission.paid ? 'Recebida' : 'A receber'}
             </button>
           </section>
         )}
 
         <div className="quick mt-12">
-          {phone ? <a href={`https://wa.me/55${phone}`} target="_blank" rel="noreferrer"><MessageCircle size={20} />WhatsApp</a> : <button onClick={() => setSheet('edit')}><MessageCircle size={20} />WhatsApp</button>}
+          {phone ? <a href={whatsappUrl(phone)} target="_blank" rel="noreferrer"><MessageCircle size={20} />WhatsApp</a> : <button onClick={() => setSheet('edit')}><MessageCircle size={20} />WhatsApp</button>}
           {phone ? <a href={`tel:${phone}`}><Phone size={20} />Ligar</a> : <button onClick={() => setSheet('edit')}><Phone size={20} />Ligar</button>}
           {maps ? <a href={maps} target="_blank" rel="noreferrer"><Navigation size={20} />Rota</a> : <button onClick={() => setSheet('edit')}><Navigation size={20} />Rota</button>}
           <button className="main" onClick={() => { newDraft(lead.id); navigate('/orcamento', true); }}><Sun size={20} />Orçamento</button>
@@ -218,7 +209,7 @@ export default function Ficha({ id }: { id: string }) {
           <ul className="list">
             {props.map((p) => (
               <li key={p.id}>
-                <button className="row" onClick={() => { setActiveProposal(p); setSheet('proposal'); }}>
+                <button className="row" onClick={() => { setActiveProposal(p.id); setSheet('proposal'); }}>
                   <span className="grow">
                     <span className="t num" style={{ fontSize: 16, fontWeight: 600 }}>{brl(p.result.finalPrice)}</span>
                     <span className="s">
@@ -267,28 +258,7 @@ export default function Ficha({ id }: { id: string }) {
         </section>
 
         <h2 className="section-title">Anexos</h2>
-        <div className="attachments">
-          <button className="add-tile" onClick={() => fileRef.current?.click()}>
-            <Camera size={20} />
-            Foto ou arquivo
-          </button>
-          {lead.attachments.map((a) => (
-            <Thumb key={a.id} id={a.id} name={a.name} onOpen={() => openAttachment(a.id)} />
-          ))}
-        </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*,application/pdf"
-          hidden
-          onChange={async (e) => {
-            const f = e.target.files?.[0];
-            e.target.value = '';
-            if (!f) return;
-            await addAttachment(lead.id, f);
-            toast('Anexo salvo');
-          }}
-        />
+        <Attachments lead={lead} />
       </main>
 
       <Sheet open={sheet === 'more'} onClose={() => setSheet(null)} title="Opções">
@@ -340,7 +310,7 @@ export default function Ficha({ id }: { id: string }) {
                 <p className="section-title">Situação</p>
                 <div className="seg white" role="radiogroup" aria-label="Situação do orçamento">
                   {(['rascunho', 'enviado', 'recusado'] as ProposalStatus[]).map((s) => (
-                    <button key={s} role="radio" aria-checked={activeProposal.status === s} onClick={async () => { await setProposalStatus(activeProposal.id, s); setActiveProposal({ ...activeProposal, status: s }); }}>{PROPOSAL_STATUS_LABEL[s]}</button>
+                    <button key={s} role="radio" aria-checked={activeProposal.status === s} onClick={() => setProposalStatus(activeProposal.id, s)}>{PROPOSAL_STATUS_LABEL[s]}</button>
                   ))}
                 </div>
               </>
@@ -352,6 +322,10 @@ export default function Ficha({ id }: { id: string }) {
                 className="btn btn-danger btn-block"
                 onClick={async () => {
                   const p = activeProposal;
+                  if (isSoldProposal(lead, p.id)) {
+                    toast('Desfaça a venda antes de apagar este orçamento');
+                    return;
+                  }
                   if (await confirm({ title: `Apagar o orçamento nº ${p.number}?`, confirm: 'Apagar', danger: true })) {
                     await deleteProposal(p.id);
                     setSheet(null);
@@ -366,53 +340,7 @@ export default function Ficha({ id }: { id: string }) {
         )}
       </Sheet>
 
-      {viewer && (
-        <Viewer
-          url={viewer.url}
-          onClose={() => setViewer(null)}
-          onDelete={async () => {
-            const v = viewer;
-            if (await confirm({ title: 'Apagar este anexo?', confirm: 'Apagar', danger: true })) {
-              setViewer(null);
-              await removeAttachment(lead.id, v.id);
-            }
-          }}
-        />
-      )}
     </>
-  );
-}
-
-function Thumb({ id, name, onOpen }: { id: string; name: string; onOpen: () => void }) {
-  const { fileUrl, leads } = useStore();
-  const [url, setUrl] = useState<string | null>(null);
-  const att = leads.flatMap((l) => l.attachments).find((a) => a.id === id);
-  useEffect(() => {
-    let alive = true;
-    fileUrl(id).then((u) => alive && setUrl(u));
-    return () => {
-      alive = false;
-    };
-  }, [id, fileUrl]);
-  const isImage = att?.type.startsWith('image/');
-  return (
-    <button className="thumb" onClick={onOpen} aria-label={`Abrir ${name}`}>
-      {url && isImage ? <img src={url} alt="" /> : <span className="muted" style={{ fontSize: 11, padding: 6, display: 'block' }}>{name}</span>}
-    </button>
-  );
-}
-
-function Viewer({ url, onClose, onDelete }: { url: string; onClose: () => void; onDelete: () => void }) {
-  useLayer(true, onClose);
-  return (
-    <div className="viewer" role="dialog" aria-modal="true" aria-label="Anexo">
-      <img src={url} alt="Anexo" />
-      <div className="bar">
-        <button className="btn btn-danger" onClick={onDelete}><Trash2 size={17} />Apagar</button>
-        <a className="btn btn-secondary" href={url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>Abrir</a>
-        <button className="btn btn-secondary" onClick={onClose}><X size={17} />Fechar</button>
-      </div>
-    </div>
   );
 }
 
@@ -448,55 +376,6 @@ function EditSheet({ open, onClose, lead }: { open: boolean; onClose: () => void
         >
           Salvar
         </button>
-      </div>
-    </Sheet>
-  );
-}
-
-function SaleSheet({ open, onClose, proposals, onConfirm }: { open: boolean; onClose: () => void; proposals: Proposal[]; onConfirm: (proposalId: string, value: number, manual: boolean) => void }) {
-  const [pid, setPid] = useState<string>('');
-  const [manual, setManual] = useState(false);
-  const [value, setValue] = useState(0);
-  useEffect(() => {
-    if (!open) return;
-    const pick = proposals.find((p) => p.status === 'aprovado') ?? proposals.find((p) => p.status === 'enviado') ?? proposals[0];
-    setPid(pick?.id ?? '');
-    setManual(false);
-    setValue(pick?.result.commission.gross ?? 0);
-  }, [open, proposals]);
-  const chosen = proposals.find((p) => p.id === pid);
-  const computed = chosen?.result.commission.gross ?? 0;
-  return (
-    <Sheet open={open} onClose={onClose} title="Fechar venda">
-      <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>Qual orçamento o cliente aprovou?</p>
-      <ul className="list" role="radiogroup" aria-label="Orçamento aprovado">
-        {proposals.map((p) => (
-          <li key={p.id}>
-            <button className="row" role="radio" aria-checked={pid === p.id} onClick={() => setPid(p.id)}>
-              <span className="grow">
-                <span className="t num">{brl(p.result.finalPrice)}</span>
-                <span className="s">nº {p.number}, {p.result.modules} × {p.result.panelW} W, {PAY_LABEL[p.input.payment.method].toLowerCase()}</span>
-              </span>
-              <span className="check" aria-hidden="true" style={pid === p.id ? { background: 'var(--ink)', borderColor: 'var(--ink)', color: 'var(--gold)' } : undefined}>✓</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-      <p className="section-title">Comissão</p>
-      <div className="seg white" role="radiogroup" aria-label="Como calcular a comissão">
-        <button role="radio" aria-checked={!manual} onClick={() => setManual(false)}>Calculada {brl(computed)}</button>
-        <button role="radio" aria-checked={manual} onClick={() => { setManual(true); setValue(computed); }}>Outro valor</button>
-      </div>
-      {manual && (
-        <div className="mt-12">
-          <Field label="Valor da comissão" htmlFor="sale-com">
-            <NumberField id="sale-com" value={value} onChange={setValue} prefix="R$" />
-          </Field>
-        </div>
-      )}
-      <div className="sheet-actions">
-        <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-        <button className="btn btn-primary" disabled={!chosen} onClick={() => chosen && onConfirm(chosen.id, manual ? value : computed, manual)}>Confirmar venda</button>
       </div>
     </Sheet>
   );

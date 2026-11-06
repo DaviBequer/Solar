@@ -154,14 +154,14 @@ export function InverterSheet({ open, onClose, input, result, set }: { open: boo
         <li>
           <button className="row" onClick={() => { set({ manualInverter: null }); onClose(); }}>
             <span className="grow"><span className="t">Automático</span><span className="s">O menor kit que cobre o consumo</span></span>
-            {!input.manualInverter && <span className="pill gold">Em uso</span>}
+            {input.manualInverter !== result.kit?.inverter && <span className="pill gold">Em uso</span>}
           </button>
         </li>
         {result.availableInverters.map((inv) => (
           <li key={inv}>
             <button className="row" onClick={() => { set({ manualInverter: inv }); onClose(); }}>
               <span className="grow"><span className="t">{inverterLabel(inv, input.inverterBrand)}</span></span>
-              {input.manualInverter === inv && <span className="pill gold">Em uso</span>}
+              {input.manualInverter === inv && result.kit?.inverter === inv && <span className="pill gold">Em uso</span>}
             </button>
           </li>
         ))}

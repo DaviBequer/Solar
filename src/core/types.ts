@@ -161,6 +161,8 @@ export interface Proposal {
   leadId: string;
   createdAt: string;
   updatedAt: string;
+  /** Quando o conteúdo foi salvo pela última vez. Ausente nas propostas de antes da v3.0.2. */
+  issuedAt?: string;
   status: ProposalStatus;
   input: QuoteInput;
   result: QuoteResult;

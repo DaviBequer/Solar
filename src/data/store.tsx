@@ -4,7 +4,8 @@ import { DEFAULT_SETTINGS, newQuoteInput } from '../core/defaults';
 import { calculate } from '../core/calc';
 import { uid } from '../core/format';
 import * as db from './db';
-import { blobToDataUrl, dataUrlToBlob, type Backup } from './backup';
+import { buildBackup, restoreBackup, type Backup } from './backup';
+import { commissionAfterEdit } from '../core/sale';
 
 export interface Draft {
   leadId: string | null;
@@ -34,6 +35,7 @@ interface StoreValue {
   setProposalStatus: (id: string, status: ProposalStatus) => Promise<void>;
   deleteProposal: (id: string) => Promise<void>;
   closeSale: (leadId: string, proposalId: string, commission: { value: number; manual: boolean }) => Promise<void>;
+  undoSale: (leadId: string, status: Lead['status']) => Promise<void>;
   saveTask: (task: Task) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   addAttachment: (leadId: string, file: File) => Promise<void>;
@@ -166,18 +168,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const lead = leadsRef.current.find((l) => l.id === id);
     const propIds = (await db.getAll<Proposal>('proposals')).filter((p) => p.leadId === id).map((p) => p.id);
     const taskIds = (await db.getAll<Task>('tasks')).filter((t) => t.leadId === id).map((t) => t.id);
-    await db.removeMany('proposals', propIds);
-    await db.removeMany('tasks', taskIds);
-    await db.removeMany('files', lead?.attachments.map((a) => a.id) ?? []);
-    await db.remove('leads', id);
+    await db.transact(['proposals', 'tasks', 'files', 'leads'], (tx) => {
+      for (const k of propIds) tx.objectStore('proposals').delete(k);
+      for (const k of taskIds) tx.objectStore('tasks').delete(k);
+      for (const a of lead?.attachments ?? []) tx.objectStore('files').delete(a.id);
+      tx.objectStore('leads').delete(id);
+    });
     setProposals((prev) => prev.filter((p) => p.leadId !== id));
     setTasks((prev) => prev.filter((t) => t.leadId !== id));
     setLeads((prev) => prev.filter((l) => l.id !== id));
     if (draftRef.current.leadId === id) setDraftState((d) => ({ ...d, leadId: null, proposalId: null }));
   }, []);
 
+  // Atualiza o ref na hora: salvar logo depois de mudar o rascunho já enxerga a mudança
   const setDraft = useCallback((updater: (d: Draft) => Draft) => {
-    setDraftState((d) => updater(d));
+    draftRef.current = updater(draftRef.current);
+    setDraftState(draftRef.current);
   }, []);
 
   const newDraft = useCallback((leadId: string | null = null) => {
@@ -196,10 +202,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const existing = d.proposalId ? (await db.get<Proposal>('proposals', d.proposalId)) : undefined;
     let proposal: Proposal;
     if (existing) {
-      proposal = { ...existing, input: structuredClone(d.input), result, updatedAt: now() };
+      proposal = { ...existing, input: structuredClone(d.input), result, updatedAt: now(), issuedAt: now() };
     } else {
       const number = settingsRef.current.nextProposalNumber;
-      proposal = { id: uid(), number, leadId: d.leadId, createdAt: now(), updatedAt: now(), status: 'rascunho', input: structuredClone(d.input), result };
+      proposal = { id: uid(), number, leadId: d.leadId, createdAt: now(), updatedAt: now(), issuedAt: now(), status: 'rascunho', input: structuredClone(d.input), result };
       await updateSettings({ nextProposalNumber: number + 1 });
     }
     await db.put('proposals', proposal);
@@ -207,6 +213,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setDraftState((cur) => ({ ...cur, proposalId: proposal.id }));
     const lead = leadsRef.current.find((l) => l.id === d.leadId);
     if (lead && lead.status === 'novo') await updateLead(lead.id, { status: 'negociando' });
+    const commission = lead && commissionAfterEdit(lead, proposal);
+    if (lead && commission) await updateLead(lead.id, { commission });
     return proposal;
   }, [updateLead, updateSettings]);
 
@@ -227,6 +235,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const closeSale = useCallback(async (leadId: string, proposalId: string, commission: { value: number; manual: boolean }) => {
     await setProposalStatus(proposalId, 'aprovado');
     await updateLead(leadId, { status: 'vendido', soldAt: now(), soldProposalId: proposalId, commission: { ...commission, paid: false } });
+  }, [setProposalStatus, updateLead]);
+
+  const undoSale = useCallback(async (leadId: string, status: Lead['status']) => {
+    const soldId = leadsRef.current.find((l) => l.id === leadId)?.soldProposalId;
+    if (soldId) await setProposalStatus(soldId, 'enviado');
+    await updateLead(leadId, { status, soldAt: null, soldProposalId: null, commission: null });
   }, [setProposalStatus, updateLead]);
 
   const saveTask = useCallback(async (task: Task) => {
@@ -267,34 +281,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return u;
   }, []);
 
-  const exportBackup = useCallback(async (): Promise<Backup> => {
-    const stored = await db.getAll<db.StoredFile>('files');
-    const files = await Promise.all(stored.map(async (f) => ({ id: f.id, type: f.blob.type, dataUrl: await blobToDataUrl(f.blob) })));
-    const exportedAt = now();
-    await updateSettings({ lastBackupAt: exportedAt });
-    return {
-      app: 'sonit',
-      version: 3,
-      exportedAt,
-      settings: { ...settingsRef.current, lastBackupAt: exportedAt },
-      kits: kitsRef.current,
-      leads: leadsRef.current,
-      proposals: await db.getAll<Proposal>('proposals'),
-      tasks: await db.getAll<Task>('tasks'),
-      files,
-    };
-  }, [updateSettings]);
+  const exportBackup = useCallback(() => buildBackup(settingsRef.current), []);
 
   const importBackup = useCallback(async (b: Backup) => {
-    for (const s of ['kits', 'leads', 'proposals', 'tasks', 'files'] as const) await db.clear(s);
-    await db.putMany('kits', b.kits);
-    await db.putMany('leads', b.leads);
-    await db.putMany('proposals', b.proposals);
-    await db.putMany('tasks', b.tasks);
-    const files = await Promise.all(b.files.map(async (f) => ({ id: f.id, blob: await dataUrlToBlob(f.dataUrl) })));
-    await db.putMany('files', files);
-    const st = { ...DEFAULT_SETTINGS, ...b.settings };
-    await db.put('kv', st, 'settings');
+    const st = await restoreBackup(b);
     urlCache.current.forEach((u) => URL.revokeObjectURL(u));
     urlCache.current.clear();
     setSettings(st);
@@ -309,20 +299,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     () => ({
       ready, settings, kits, leads, proposals, tasks, draft,
       updateSettings, replaceKits, saveKit, deleteKit, createLead, updateLead, deleteLead,
-      setDraft, newDraft, openProposalInDraft, saveDraftAsProposal, setProposalStatus, deleteProposal, closeSale,
+      setDraft, newDraft, openProposalInDraft, saveDraftAsProposal, setProposalStatus, deleteProposal, closeSale, undoSale,
       saveTask, deleteTask, addAttachment, removeAttachment, fileUrl, exportBackup, importBackup,
     }),
-    [ready, settings, kits, leads, proposals, tasks, draft, updateSettings, replaceKits, saveKit, deleteKit, createLead, updateLead, deleteLead, setDraft, newDraft, openProposalInDraft, saveDraftAsProposal, setProposalStatus, deleteProposal, closeSale, saveTask, deleteTask, addAttachment, removeAttachment, fileUrl, exportBackup, importBackup],
+    [ready, settings, kits, leads, proposals, tasks, draft, updateSettings, replaceKits, saveKit, deleteKit, createLead, updateLead, deleteLead, setDraft, newDraft, openProposalInDraft, saveDraftAsProposal, setProposalStatus, deleteProposal, closeSale, undoSale, saveTask, deleteTask, addAttachment, removeAttachment, fileUrl, exportBackup, importBackup],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 /* ---------- consultas derivadas ---------- */
-
-export function proposalsOf(proposals: Proposal[], leadId: string): Proposal[] {
-  return proposals.filter((p) => p.leadId === leadId).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-}
 
 export function nextTaskOf(tasks: Task[], leadId: string): Task | null {
   const pending = tasks.filter((t) => t.leadId === leadId && !t.done).sort((a, b) => a.date.localeCompare(b.date));

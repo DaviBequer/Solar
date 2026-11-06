@@ -4,6 +4,7 @@ import { TopBar } from '../ui/chrome';
 import { useStore } from '../data/store';
 import { TASK_LABEL } from '../core/defaults';
 import { cap, daysBetween, durationText, MONTHS, relativeDay, sameDay, startOfDay, time, WEEKDAYS, WEEKDAYS_SHORT } from '../core/format';
+import { mapsUrl } from '../core/links';
 import type { Task } from '../core/types';
 import { TaskSheet } from './task-sheet';
 
@@ -94,7 +95,7 @@ export default function Agenda() {
     const d = new Date(t.date);
     const lead = leads.find((l) => l.id === t.leadId);
     const phone = lead?.phone.replace(/\D/g, '');
-    const maps = lead?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.address)}` : null;
+    const maps = lead ? mapsUrl(lead) : null;
     const visit = t.type === 'visita-orcamento' || t.type === 'visita-tecnica' || t.type === 'pos-venda';
     return (
       <li key={t.id} className={`task-row${t.done ? ' done' : ''}`}>
