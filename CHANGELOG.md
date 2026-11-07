@@ -1,5 +1,9 @@
 # Versões
 
+## 3.1.5 — 7 de novembro de 2026
+
+- A casa do Orçamento agora é uma foto de verdade: casa térrea com muro, garagem e poste. Os painéis do orçamento ficam no telhado da foto, e o dia, a noite, o inversor, a bateria e o caminho da energia continuam animados.
+
 ## 3.1.4 — 7 de novembro de 2026
 
 - Gerar o contrato já marca o cliente como vendido, com opção de desmarcar. Na ficha do cliente vendido, o botão Cliente cancelou desfaz a venda e manda para Perdido.
