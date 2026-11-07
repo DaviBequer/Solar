@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AudioWaveform, BadgeDollarSign, BatteryCharging, CalendarDays, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, CirclePlus, Cpu, FileUp, Grid2x2Plus, HandCoins, Pause, Play, Plus, ReceiptText, Save, ScrollText, SlidersHorizontal, UtilityPole, Warehouse, X } from 'lucide-react';
 import { TopBar } from '../ui/chrome';
-import { useToast } from '../ui/kit';
+import { useMedia, useToast } from '../ui/kit';
 import { useStore } from '../data/store';
 import { billCompare, calculate, inverterBrandOf, inverterSize, installmentFor, kitKw } from '../core/calc';
 import { GRID_LABEL, INSTALLMENT_OPTIONS, LEAD_STATUS_LABEL, PAY_LABEL, ROOF_LABEL, SYSTEM_LABEL } from '../core/defaults';
@@ -189,18 +189,6 @@ function Scene({ total, type, bats, generation, coverage }: { total: number; typ
   );
 }
 
-/** Três colunas só a partir de 1340 px, como no CSS */
-function useWide() {
-  const q = '(min-width: 1340px)';
-  const [wide, setWide] = useState(() => matchMedia(q).matches);
-  useEffect(() => {
-    const m = matchMedia(q), on = () => setWide(m.matches);
-    m.addEventListener('change', on);
-    return () => m.removeEventListener('change', on);
-  }, []);
-  return wide;
-}
-
 export default function Orcamento() {
   const { draft, setDraft, newDraft, selectClient, keepCurrentClient, kits, leads, proposals, saveDraftAsProposal, settings, updateSettings, addAttachment } = useStore();
   const toast = useToast();
@@ -215,7 +203,7 @@ export default function Orcamento() {
   const [tab, setTab] = useState<'neg' | 'fix'>('neg');
   const [preview, setPreview] = useState<'auto' | 'manual'>('manual');
   const [custom, setCustom] = useState({ final: 0, discount: 0 });
-  const wide = useWide();
+  const wide = useMedia('(min-width: 1340px)'); // três colunas, como no CSS
 
   const input = draft.input;
   const r = useMemo(() => calculate(input, kits), [input, kits]);

@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { Bell, ChevronLeft, ChevronRight, ImagePlus } from 'lucide-react';
-import { Field, NumberField, Sheet, useConfirm, useToast } from '../ui/kit';
+import { Field, NumberField, Sheet, useConfirm, useMedia, useToast } from '../ui/kit';
 import { useStore } from '../data/store';
 import { brl, documentMask, num, phoneMask } from '../core/format';
 import { withSettings } from '../core/quote';
@@ -65,6 +65,9 @@ const GROUPS: Record<string, { title: string; hint?: string; fields: NumSpec[] }
   validade: { title: 'Validade da proposta', fields: [{ key: 'proposalValidityDays', label: 'Dias', decimals: 0, suffix: 'dias' }] },
 };
 
+const AJ_TABS = [['proposta', 'Na proposta'], ['contrato', 'Contrato'], ['calculo', 'Cálculo'], ['precos', 'Preços e metas'], ['lembretes', 'Lembretes'], ['dados', 'Seus dados']] as const;
+type AjTab = (typeof AJ_TABS)[number][0];
+
 function Row({ label, value, sub, onClick }: { label: string; value?: ReactNode; sub?: string; onClick: () => void }) {
   return (
     <li>
@@ -85,6 +88,9 @@ export default function Ajustes() {
   const toast = useToast();
   const confirm = useConfirm();
   const [group, setGroup] = useState<string | null>(null);
+  // Computador: uma seção por aba; celular: tudo em lista
+  const wide = useMedia('(min-width: 900px)');
+  const [tab, setTab] = useState<AjTab>('proposta');
   const [vals, setVals] = useState<Partial<Settings>>({});
   const [textSheet, setTextSheet] = useState<null | 'empresa' | 'vendedor' | 'contratada' | 'padrao'>(null);
   const [companyData, setCompanyData] = useState(settings.company);
@@ -154,6 +160,7 @@ export default function Ajustes() {
   }
 
   const g = group ? GROUPS[group] : null;
+  const show = (k: AjTab) => !wide || tab === k;
   const pct = (n: number) => `${num(n, Number.isInteger(n) ? 0 : 2)}%`;
 
   return (
@@ -162,7 +169,13 @@ export default function Ajustes() {
         <button className="icon-btn" aria-label="Voltar" onClick={() => goBack('/orcamento')}><ChevronLeft size={20} /></button>
         <h1>Ajustes</h1>
       </div>
-      <main className="page full">
+      <main className={`page full aj${wide ? ' aj-wide' : ''}`}>
+        {wide && (
+          <div className="aj-tabs" role="tablist" aria-label="Seções dos ajustes">
+            {AJ_TABS.map(([k, label]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{label}</button>)}
+          </div>
+        )}
+        <div className="aj-sec" hidden={!show('proposta')}>
         <h2 className="section-title">Na proposta</h2>
         <ul className="list">
           <li>
@@ -197,6 +210,8 @@ export default function Ajustes() {
           }}
         />
 
+        </div>
+        <div className="aj-sec" hidden={!show('contrato')}>
         <h2 className="section-title">Contrato</h2>
         <ul className="list">
           <Row label="Dados da empresa" sub="Saem no contrato. Os do cliente vêm da ficha" value={companyMissing(settings.company).length ? <span className="muted">A preencher</span> : settings.company.legalName} onClick={() => { setCompanyData(settings.company); setTextSheet('contratada'); }} />
@@ -228,6 +243,8 @@ export default function Ajustes() {
           }}
         />
 
+        </div>
+        <div className="aj-sec" hidden={!show('calculo')}>
         <h2 className="section-title">Cálculo</h2>
         <ul className="list">
           <Row label="Tarifa de energia" value={`R$ ${num(settings.tariff, 2)} por kWh`} onClick={() => openGroup('tarifa')} />
@@ -238,6 +255,8 @@ export default function Ajustes() {
           <Row label="Comissão e imposto" value={`${pct(settings.commissionPct)} e ${pct(settings.taxPct)}`} onClick={() => openGroup('comissao')} />
         </ul>
 
+        </div>
+        <div className="aj-sec" hidden={!show('precos')}>
         <h2 className="section-title">Preços e metas</h2>
         <ul className="list">
           <Row label="Tabela de kits" sub={kits.length === 0 ? 'Vazia: importe a planilha' : `${kits.length} ${kits.length === 1 ? 'kit' : 'kits'}`} onClick={() => navigate('/kits')} />
@@ -246,6 +265,8 @@ export default function Ajustes() {
           <Row label="Meta de vendas por mês" value={settings.monthlyGoal ? brl(settings.monthlyGoal) : 'Sem meta'} onClick={() => openGroup('meta')} />
         </ul>
 
+        </div>
+        <div className="aj-sec" hidden={!show('lembretes')}>
         <h2 className="section-title">Lembretes</h2>
         <section className="card pad" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Bell size={18} className="chev" />
@@ -258,6 +279,8 @@ export default function Ajustes() {
           )}
         </section>
 
+        </div>
+        <div className="aj-sec" hidden={!show('dados')}>
         <h2 className="section-title">Seus dados</h2>
         <section className="card pad">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -283,6 +306,8 @@ export default function Ajustes() {
             if (f) await doRestore(f);
           }}
         />
+
+        </div>
 
         <p className="muted" style={{ textAlign: 'center', fontSize: 12, marginTop: 24 }}>Sonit {APP_VERSION}</p>
       </main>

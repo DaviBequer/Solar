@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
-import { ChevronLeft, Download, Plus, Search, Upload } from 'lucide-react';
+import { ChevronLeft, Download, Plus, Search, Trash2, Upload } from 'lucide-react';
 import { Field, NumberField, Sheet, useConfirm, useToast } from '../ui/kit';
 import { useStore } from '../data/store';
 import { kitsToCsv, parseKitsCsv } from '../core/csv';
-import { brl, num, uid } from '../core/format';
+import { brl, num, parseBR, uid } from '../core/format';
 import type { Kit } from '../core/types';
 import { goBack } from '../router';
 import { deliverFile } from '../ui/deliver';
@@ -14,6 +14,48 @@ function panels(k: Kit): string {
   if (k.panel610) parts.push(`${k.panel610} × 610 W`);
   if (k.panel700) parts.push(`${k.panel700} × 700 W`);
   return parts.join(' + ') || 'Sem módulos';
+}
+
+type NumKey = 'gm' | 'panel585' | 'panel610' | 'panel700' | 'price';
+const fmt = (k: NumKey, v: number) => (!v ? '' : k === 'price' ? num(v, Number.isInteger(v) ? 0 : 2) : String(v));
+
+/** Linha da tabela: edita no lugar e salva ao sair do campo, sem a linha pular de posição enquanto digita. */
+function KitRow({ kit, onSave, onDelete }: { kit: Kit; onSave: (k: Kit) => void; onDelete: () => void }) {
+  const [d, setD] = useState(kit);
+  const [raw, setRaw] = useState<Partial<Record<NumKey, string>>>({});
+  const commit = () => {
+    setRaw({});
+    // Kit sem geração, preço ou módulos não serve ao cálculo: volta ao que era
+    if (!d.gm || !d.price || !(d.panel585 || d.panel610 || d.panel700)) return setD(kit);
+    if (JSON.stringify(d) !== JSON.stringify(kit)) onSave(d);
+  };
+  const numCell = (k: NumKey, label: string) => (
+    <td className={k === 'price' ? 'kt-price' : 'kt-n'}>
+      <input
+        className="kt-in num"
+        inputMode="decimal"
+        aria-label={`${label}, kit de ${kit.gm} kWh`}
+        value={raw[k] ?? fmt(k, d[k])}
+        placeholder="—"
+        onFocus={(e) => e.target.select()}
+        onChange={(e) => { const t = e.target.value.replace(/[^\d.,]/g, ''); setRaw({ ...raw, [k]: t }); setD({ ...d, [k]: k === 'price' ? parseBR(t) : Math.round(parseBR(t)) }); }}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+      />
+    </td>
+  );
+  return (
+    <tr>
+      {numCell('gm', 'Geração')}
+      {numCell('panel585', 'Módulos de 585 W')}
+      {numCell('panel610', 'Módulos de 610 W')}
+      {numCell('panel700', 'Módulos de 700 W')}
+      <td><input className="kt-in" aria-label={`Inversor, kit de ${kit.gm} kWh`} value={d.inverter} onChange={(e) => setD({ ...d, inverter: e.target.value })} onBlur={commit} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} /></td>
+      <td><input className="kt-in" aria-label={`Ligação, kit de ${kit.gm} kWh`} value={d.phase ?? ''} placeholder="—" onChange={(e) => setD({ ...d, phase: e.target.value || undefined })} onBlur={commit} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} /></td>
+      {numCell('price', 'Preço')}
+      <td className="kt-x"><button className="icon-btn plain sm" aria-label={`Apagar kit de ${kit.gm} kWh`} onClick={onDelete}><Trash2 size={15} /></button></td>
+    </tr>
+  );
 }
 
 export default function Kits() {
@@ -44,9 +86,9 @@ export default function Kits() {
         <h1>Tabela de kits</h1>
         <button className="icon-btn" aria-label="Importar planilha" onClick={() => fileRef.current?.click()}><Upload size={19} /></button>
       </div>
-      <main className="page full">
+      <main className="page full kits">
         <p className="muted" style={{ fontSize: 13, marginTop: 10, lineHeight: 1.45 }}>
-          O orçamento escolhe o menor kit que cobre o consumo com a margem. Para importar, use uma planilha CSV com as colunas GM, 585, 610, 700, Inversor, Valor e Fase (opcional).
+          Toque em qualquer número para editar; salva ao sair do campo. O orçamento escolhe o menor kit que cobre o consumo com a margem. Para importar, use uma planilha CSV com as colunas GM, 585, 610, 700, Inversor, Valor e Fase (opcional).
         </p>
 
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
@@ -65,19 +107,23 @@ export default function Kits() {
 
         <p className="section-title">{kits.length === 1 ? '1 kit' : `${kits.length} kits`}{q && list.length !== kits.length ? `, ${list.length} encontrados` : ''}</p>
         {list.length > 0 ? (
-          <ul className="list">
-            {list.map((k) => (
-              <li key={k.id}>
-                <button className="row" onClick={() => setEdit({ ...k })}>
-                  <span className="grow">
-                    <span className="t">{num(k.gm)} kWh por mês</span>
-                    <span className="s">{panels(k)}, inversor {k.inverter || '—'}{k.phase ? `, ${k.phase.toLowerCase()}` : ''}</span>
-                  </span>
-                  <span className="v num" style={{ fontSize: 14, fontWeight: 600 }}>{brl(k.price)}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="kt-wrap">
+            <table className="kt">
+              <thead>
+                <tr><th className="kt-n">Geração<small>kWh/mês</small></th><th className="kt-n">585 W<small>módulos</small></th><th className="kt-n">610 W<small>módulos</small></th><th className="kt-n">700 W<small>módulos</small></th><th>Inversor</th><th>Ligação</th><th className="kt-price">Preço<small>R$</small></th><th aria-label="Apagar" /></tr>
+              </thead>
+              <tbody>
+                {list.map((k) => (
+                  <KitRow
+                    key={`${k.id}-${k.gm}-${k.price}-${k.inverter}-${k.panel585}-${k.panel610}-${k.panel700}-${k.phase ?? ''}`}
+                    kit={k}
+                    onSave={async (nk) => { await saveKit(nk); toast('Kit atualizado'); }}
+                    onDelete={async () => { if (await confirm({ title: `Apagar o kit de ${num(k.gm)} kWh?`, confirm: 'Apagar', danger: true })) await deleteKit(k.id); }}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <div className="card empty">
             {kits.length === 0 ? (

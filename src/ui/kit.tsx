@@ -42,6 +42,17 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   );
 }
 
+/** Acompanha uma media query, como (min-width: 900px) */
+export function useMedia(q: string) {
+  const [on, setOn] = useState(() => matchMedia(q).matches);
+  useEffect(() => {
+    const m = matchMedia(q), set = () => setOn(m.matches);
+    m.addEventListener('change', set);
+    return () => m.removeEventListener('change', set);
+  }, [q]);
+  return on;
+}
+
 /* ---------- aviso rápido ---------- */
 const ToastCtx = createContext<(msg: string) => void>(() => {});
 export const useToast = () => useContext(ToastCtx);

@@ -1,5 +1,11 @@
 # Versões
 
+## 3.1.7 — 7 de novembro de 2026
+
+- No computador, Ajustes em abas no topo: Na proposta, Contrato, Cálculo, Preços e metas, Lembretes e Seus dados, usando a largura da tela.
+- Menu lateral mais fino.
+- Tabela de kits virou tabela de verdade, com colunas de geração, módulos, inversor, ligação e preço. Edita direto na célula e salva ao sair do campo.
+
 ## 3.1.6 — 7 de novembro de 2026
 
 - A casa é só a foto, com os painéis dela, mudando de dia para noite. Sem o desenho do inversor por cima.
