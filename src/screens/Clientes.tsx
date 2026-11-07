@@ -72,7 +72,7 @@ export default function Clientes() {
   return (
     <>
       <TopBar />
-      <main className="page" style={{ paddingBottom: 'calc(var(--tabbar-h) + var(--safe-b) + 88px)' }}>
+      <main className="page">
         <div className="page-head">
           <div>
             <h1>Clientes</h1>
@@ -83,9 +83,12 @@ export default function Clientes() {
           </div>
         </div>
 
-        <div className="search mt-16">
-          <Search size={18} aria-hidden="true" />
-          <input className="input" placeholder="Buscar por nome ou telefone" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Buscar cliente" />
+        <div className="search-row mt-16">
+          <div className="search">
+            <Search size={18} aria-hidden="true" />
+            <input className="input" placeholder="Buscar por nome ou telefone" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Buscar cliente" />
+          </div>
+          <button className="icon-btn add" aria-label="Novo cliente" title="Novo cliente" onClick={() => setCreating(true)}><Plus size={22} /></button>
         </div>
 
         {!q && (
@@ -137,7 +140,7 @@ export default function Clientes() {
             ) : leads.length === 0 ? (
               <>
                 <strong>Nenhum cliente ainda</strong>
-                Toque em Novo para cadastrar o primeiro, ou crie direto no orçamento.
+                Toque no botão + para cadastrar o primeiro, ou crie direto no orçamento.
               </>
             ) : (
               <>Nenhum cliente em “{FILTER_LABEL[filter].toLowerCase()}”.</>
@@ -145,8 +148,6 @@ export default function Clientes() {
           </div>
         )}
       </main>
-
-      <button className="fab icon" aria-label="Novo cliente" onClick={() => setCreating(true)}><Plus size={26} /></button>
 
       <ClientPicker
         createOnly

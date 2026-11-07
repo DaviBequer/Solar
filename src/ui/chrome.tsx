@@ -19,21 +19,28 @@ export function TopBar() {
   );
 }
 
-const TABS: { name: RouteName; label: string; path: string; Icon: typeof Sun }[] = [
+const TABS: { name: RouteName; label: string; path: string; Icon: typeof Sun; sideOnly?: boolean }[] = [
   { name: 'orcamento', label: 'Orçamento', path: '/orcamento', Icon: Sun },
   { name: 'clientes', label: 'Clientes', path: '/clientes', Icon: Users },
   { name: 'agenda', label: 'Agenda', path: '/agenda', Icon: CalendarDays },
   { name: 'painel', label: 'Painel', path: '/painel', Icon: BarChart3 },
+  { name: 'ajustes', label: 'Ajustes', path: '/ajustes', Icon: SlidersHorizontal, sideOnly: true },
 ];
 
-export function TabBar({ active }: { active: RouteName }) {
-  const current = active === 'cliente' ? 'clientes' : active;
+/** Abas embaixo no celular, menu lateral no computador. Fora das abas, só aparece no computador. */
+export function TabBar({ active, desktopOnly }: { active: RouteName; desktopOnly: boolean }) {
+  const current = active === 'cliente' ? 'clientes' : active === 'kits' ? 'ajustes' : active;
   return (
-    <nav className="tabbar no-print" aria-label="Navegação principal">
-      {TABS.map(({ name, label, path, Icon }) => (
+    <nav className={`tabbar no-print${desktopOnly ? ' desktop-only' : ''}`} aria-label="Navegação principal">
+      <div className="side-brand">
+        <img src={logo} alt="" />
+        <span className="brand-name">Sonit</span>
+        <span className="ver">{APP_VERSION}</span>
+      </div>
+      {TABS.map(({ name, label, path, Icon, sideOnly }) => (
         <button
           key={name}
-          className="tab"
+          className={`tab${sideOnly ? ' side-only' : ''}`}
           aria-current={current === name ? 'page' : undefined}
           onClick={() => current !== name && navigate(path, true)}
         >

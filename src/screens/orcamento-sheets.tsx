@@ -59,13 +59,13 @@ export function ClientPicker({ open, onClose, onPick, createOnly = false }: { op
         </div>
       ) : (
         <>
-          <div className="search">
-            <Search size={18} aria-hidden="true" />
-            <input className="input" placeholder="Buscar por nome ou telefone" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Buscar cliente" />
+          <div className="search-row">
+            <div className="search">
+              <Search size={18} aria-hidden="true" />
+              <input className="input" placeholder="Buscar por nome ou telefone" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Buscar cliente" />
+            </div>
+            <button className="icon-btn add" aria-label="Novo cliente" title="Novo cliente" onClick={() => { setCreating(true); setName(q.replace(/\d/g, '').trim()); }}><Plus size={22} /></button>
           </div>
-          <button className="btn btn-secondary btn-block mt-12" onClick={() => { setCreating(true); setName(q.replace(/\d/g, '').trim()); }}>
-            <Plus size={18} /> Novo cliente
-          </button>
           <ul className="list mt-12">
             {list.map((l) => (
               <li key={l.id}>

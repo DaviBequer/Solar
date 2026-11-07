@@ -140,6 +140,8 @@ export default function Ficha({ id }: { id: string }) {
       </div>
 
       <main className="page" style={{ paddingTop: 14 }}>
+        <div className="two-col">
+        <div>
         <button style={{ display: 'flex', alignItems: 'center', gap: 14, border: 0, background: 'transparent', padding: 0, textAlign: 'left', width: '100%' }} onClick={() => setSheet('edit')}>
           <span className="avatar lg" aria-hidden="true">{initials(lead.name)}</span>
           <span style={{ minWidth: 0 }}>
@@ -205,6 +207,8 @@ export default function Ficha({ id }: { id: string }) {
           </div>
         </section>
 
+        </div>
+        <div>
         <h2 className="section-title">Orçamentos</h2>
         {props.length > 0 ? (
           <ul className="list">
@@ -260,6 +264,8 @@ export default function Ficha({ id }: { id: string }) {
 
         <h2 className="section-title">Anexos</h2>
         <Attachments lead={lead} />
+        </div>
+        </div>
       </main>
 
       <Sheet open={sheet === 'more'} onClose={() => setSheet(null)} title="Opções">

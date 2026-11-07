@@ -6,6 +6,8 @@ import { uid } from '../core/format';
 import * as db from './db';
 import { buildBackup, restoreBackup, type Backup } from './backup';
 import { commissionAfterEdit } from '../core/sale';
+import { parseKitsCsv } from '../core/csv';
+import defaultKitsCsv from './default-kits.csv?raw';
 
 export interface Draft {
   leadId: string | null;
@@ -76,14 +78,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const [s, k, l, p, t, d] = await Promise.all([
+      const [s, stored, l, p, t, d, seeded] = await Promise.all([
         db.get<Settings>('kv', 'settings'),
         db.getAll<Kit>('kits'),
         db.getAll<Lead>('leads'),
         db.getAll<Proposal>('proposals'),
         db.getAll<Task>('tasks'),
         db.get<Draft>('kv', 'draft'),
+        db.get<boolean>('kv', 'kitsSeeded'),
       ]);
+      // Tabela nativa só na primeira abertura: quem já tem kits, ou apagou a tabela depois, não recebe de novo
+      let k = stored;
+      if (!seeded) {
+        if (k.length === 0) {
+          k = parseKitsCsv(defaultKitsCsv);
+          await db.putMany('kits', k);
+        }
+        await db.put('kv', true, 'kitsSeeded');
+      }
       const st = { ...DEFAULT_SETTINGS, ...(s ?? {}) };
       setSettings(st);
       setKits(k);

@@ -1,5 +1,12 @@
 # Versões
 
+## 3.0.5 — 7 de novembro de 2026
+
+- Tabela de 65 kits já vem no app na primeira abertura. Para trocar, importe outra em Ajustes.
+- Layout para computador: menu lateral, janelas centralizadas e duas colunas no Orçamento e na Ficha em telas largas.
+- Novo cliente agora é um botão só com ícone, ao lado da busca.
+- Sem barra de rolagem visível: rola com o dedo ou com a roda do mouse.
+
 ## 3.0.4 — 6 de novembro de 2026
 
 - Tabela de kits com o padrão de ligação (coluna Fase, opcional). O orçamento avisa quando o padrão do cliente não atende o kit.

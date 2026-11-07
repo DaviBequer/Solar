@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { calculate, installment, inverterLabel } from './calc';
 import { DEFAULT_SETTINGS, newQuoteInput } from './defaults';
 import { kitsToCsv, parseKitsCsv, parseMoney } from './csv';
+import defaultKitsCsv from '../data/default-kits.csv?raw';
 import { stepModules, withSettings } from './quote';
 import { backupOverdue, monthsText, parseBR } from './format';
 import type { Kit, QuoteInput } from './types';
@@ -231,6 +232,14 @@ describe('comissão', () => {
 });
 
 describe('planilha de kits', () => {
+  it('a tabela nativa traz todos os kits, com preço e padrão', () => {
+    const list = parseKitsCsv(defaultKitsCsv);
+    expect(list).toHaveLength(65);
+    expect(list.every((k) => k.gm > 0 && k.panel610 > 0 && k.price > 0 && k.phase)).toBe(true);
+    expect(list[0]).toMatchObject({ gm: 179, panel610: 3, price: 7563.44, inverter: 'Microinversor SAJ 2.250W', phase: 'Monofásico' });
+    expect(list[64]).toMatchObject({ gm: 22405, panel610: 371, price: 407987.14, phase: 'Trifásico' });
+  });
+
   it('lê o formato antigo com vírgula', () => {
     const k = parseKitsCsv('GM,585,610,700,Inversor,Valor\n890,0,12,0,6,22900.50\n');
     expect(k).toHaveLength(1);

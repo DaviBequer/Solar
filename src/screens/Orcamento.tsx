@@ -110,6 +110,8 @@ export default function Orcamento() {
           )}
         </div>
 
+        <div className="two-col">
+        <div>
         <button className="client-chip" onClick={() => setSheet('client')}>
           {lead ? (
             <>
@@ -234,6 +236,8 @@ export default function Orcamento() {
           <div className="notice mt-12" key={w} role="status"><AlertTriangle size={16} />{w}</div>
         ))}
 
+        </div>
+        <div>
         <h2 className="section-title">Pagamento</h2>
         <section className="card pad">
           <div className="seg" role="group" aria-label="Forma de pagamento">
@@ -309,6 +313,8 @@ export default function Orcamento() {
             </section>
           </>
         )}
+        </div>
+        </div>
       </main>
 
       <div className="pricebar no-print">

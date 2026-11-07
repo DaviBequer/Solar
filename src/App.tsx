@@ -32,7 +32,7 @@ export default function App() {
       {route.name === 'ajustes' && <Ajustes />}
       {route.name === 'kits' && <Kits />}
       {route.name === 'proposta' && route.id && <Proposta key={route.id} id={route.id} />}
-      {withTabs && <TabBar active={route.name} />}
+      <TabBar active={route.name} desktopOnly={!withTabs} />
     </div>
   );
 }
