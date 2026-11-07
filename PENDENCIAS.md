@@ -4,7 +4,7 @@ Resumo da conversa em que o Sonit foi reescrito (5 e 6 de novembro de 2026), par
 
 ## Estado atual
 
-- **v3.0.6 publicada** em https://davibequer.github.io/Solar/ (ramo `gh-pages`, publicado com `npm run publicar`).
+- **v3.1.0 publicada** em https://davibequer.github.io/Solar/ (ramo `gh-pages`, publicado com `npm run publicar`).
 - Reescrita completa a partir do app gerado no Google AI Studio. Nada do código antigo é usado; os dois primeiros commits do histórico (`4e49732` e `5d65523`) ainda contêm o código original.
 - Testes em `npm test`: cálculo, venda, proposta, links, navegação e backup de ponta a ponta.
 - O fluxo inteiro foi testado num navegador em tamanho de celular (importar kits, orçar, criar cliente, gerar PDF, agendar, fechar venda, painel). Esse teste ficou fora do repositório.

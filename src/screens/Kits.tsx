@@ -6,6 +6,7 @@ import { kitsToCsv, parseKitsCsv } from '../core/csv';
 import { brl, num, uid } from '../core/format';
 import type { Kit } from '../core/types';
 import { goBack } from '../router';
+import { deliverFile } from '../ui/deliver';
 
 function panels(k: Kit): string {
   const parts: string[] = [];
@@ -31,23 +32,7 @@ export default function Kits() {
       .sort((a, b) => a.gm - b.gm || a.price - b.price);
   }, [kits, q]);
 
-  async function exportCsv() {
-    const file = new File([kitsToCsv(kits)], 'tabela-kits.csv', { type: 'text/csv' });
-    if (navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file] });
-        return;
-      } catch {
-        /* baixa se cancelar */
-      }
-    }
-    const url = URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  }
+  const exportCsv = () => deliverFile(new File([kitsToCsv(kits)], 'tabela-kits.csv', { type: 'text/csv' }), 'Tabela de kits');
 
   const set = (patch: Partial<Kit>) => setEdit((k) => (k ? { ...k, ...patch } : k));
   const isNew = edit ? !kits.some((k) => k.id === edit.id) : false;

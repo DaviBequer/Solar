@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { calculate, installment, inverterLabel } from './calc';
+import { allowedKits, calculate, inverterSize, kitKw, installment, inverterLabel } from './calc';
 import { DEFAULT_SETTINGS, newQuoteInput } from './defaults';
 import { kitsToCsv, parseKitsCsv, parseMoney } from './csv';
 import defaultKitsCsv from '../data/default-kits.csv?raw';
-import { stepModules, withSettings } from './quote';
+import { horizonYears, inverterSizes, keepOnLeave, pickInverter, stepKit, withSettings } from './quote';
 import { backupOverdue, monthsText, parseBR } from './format';
 import type { Kit, QuoteInput } from './types';
 
@@ -15,9 +15,10 @@ const kits: Kit[] = [
   { id: 'e', gm: 1500, panel585: 22, panel610: 0, panel700: 0, inverter: '10', price: 36000 },
 ];
 
+/** Sem limites de rede: os testes de limite montam os seus */
 function input(over: Partial<QuoteInput> = {}): QuoteInput {
   const base = newQuoteInput(DEFAULT_SETTINGS);
-  return { ...base, billValue: 680, ...over };
+  return { ...base, billValue: 680, params: { ...base.params, gridLimits: undefined }, ...over };
 }
 
 describe('dimensionamento e kit', () => {
@@ -94,15 +95,19 @@ describe('edição do orçamento', () => {
     expect(r.warnings[0]).toMatch(/SAJ 6K/);
   });
 
-  it('mais um e menos um módulo voltam ao mesmo kit, mesmo vindo de outra potência', () => {
-    let i = input({ billValue: 1100 });
-    const first = calculate(i, kits);
-    expect(first.kit?.id).toBe('e');
-    i = { ...i, ...stepModules(i, first, 1) };
-    i = { ...i, ...stepModules(i, calculate(i, kits), -1) };
-    const r = calculate(i, kits);
-    expect(r.kit?.id).toBe('e');
-    expect(r.finalPrice).toBe(36000);
+  it('o passo vai de kit em kit e para no fim da tabela', () => {
+    let i = input({ billValue: 680 });
+    expect(calculate(i, kits).modules).toBe(12);
+    i = { ...i, ...stepKit(i, calculate(i, kits), kits, 1)! };
+    expect(calculate(i, kits).modules).toBe(14);
+    expect(stepKit(i, calculate(i, kits), kits, 1)).toBeNull();
+    i = { ...i, ...stepKit(i, calculate(i, kits), kits, -1)! };
+    expect(calculate(i, kits).kit?.id).toBe('b');
+  });
+
+  it('em ampliação o passo é de um módulo', () => {
+    const i = input({ systemType: 'ampliacao' });
+    expect(stepKit({ ...i, manualModules: 6 }, calculate({ ...i, manualModules: 6 }, kits), kits, -1)).toEqual({ manualModules: 5 });
   });
 
   it('ajuste salvo chega ao rascunho novo, inclusive juros padrão', () => {
@@ -298,5 +303,94 @@ describe('formatos', () => {
     expect(inverterLabel('6', 'SOFAR')).toBe('SOFAR 6 kW');
     expect(inverterLabel('5,5', '')).toBe('5,5 kW');
     expect(inverterLabel('6kW', 'SOFAR')).toBe('SOFAR 6 kW');
+  });
+});
+
+describe('limites e acréscimos da v3.1', () => {
+  const limited = (over: Partial<QuoteInput> = {}) => ({ ...newQuoteInput(DEFAULT_SETTINGS), billValue: 680, ...over });
+  const big: Kit[] = [
+    { id: 's', gm: 1400, panel585: 0, panel610: 24, panel700: 0, inverter: 'SAJ/SOFAR 7.500W', price: 30000 },
+    { id: 'm', gm: 1800, panel585: 0, panel610: 30, panel700: 0, inverter: 'SAJ/SOFAR 15.000W', price: 40000 },
+    { id: 'g', gm: 3000, panel585: 0, panel610: 50, panel700: 0, inverter: 'SAJ/SOFAR 25.000W', price: 60000 },
+  ];
+
+  it('lê o tamanho do inversor como vem na tabela', () => {
+    expect(kitKw('Microinversor SAJ 2.250W')).toBe(2.25);
+    expect(kitKw('SAJ/SOFAR 7,5K OU 2 x 5K')).toBe(7.5);
+    expect(kitKw('SAJ/SOFAR 110KW + 15KW')).toBe(125);
+    expect(kitKw('10')).toBe(10);
+    expect(inverterSize('SAJ/SOFAR 15.000W')).toBe('15 kW');
+    expect(inverterSize('SAJ/SOFAR 7,5K OU 2 x 5K')).toBe('7,5 kW ou 2 × 5 kW');
+  });
+
+  it('a rede limita o kit e avisa quando não cobre', () => {
+    expect(allowedKits(big, limited({ grid: 'mono' })).map((k) => k.id)).toEqual(['s']);
+    const r = calculate(limited({ grid: 'mono', billValue: 1500 }), big);
+    expect(r.kit?.id).toBe('s');
+    expect(r.warnings.join()).toMatch(/Monofásico vai até 24 módulos, com inversor de 7,5 kW/);
+  });
+
+  it('o limite do inversor também vale', () => {
+    const base = limited({ grid: 'tri' });
+    const i = { ...base, params: { ...base.params, inverterLimits: { '25': 40 } } };
+    expect(allowedKits(big, i).map((k) => k.id)).toEqual(['s', 'm']);
+    expect(inverterSizes(i, big)).toEqual([7.5, 15]);
+  });
+
+  it('escolher o inversor fixa o kit daquele tamanho', () => {
+    const i = limited({ grid: 'tri', billValue: 500 });
+    expect(calculate({ ...i, ...pickInverter(i, calculate(i, big), big, 25)! }, big).kit?.id).toBe('g');
+  });
+
+  it('marca, telhado e carport somam ao projeto', () => {
+    const k = [kits[1]];
+    const price = (over: Partial<QuoteInput>) => calculate(limited(over), k).basePrice;
+    expect(price({})).toBe(22900);
+    expect(price({ moduleBrand: 'WEG' })).toBe(23900);
+    expect(price({ inverterBrand: 'WEG' })).toBe(22900 + 1000);
+    expect(price({ roof: 'laje' })).toBe(23900);
+    expect(price({ roof: 'carport', carportPrice: 8000 })).toBe(30900);
+    expect(calculate(limited({ roof: 'carport' }), k).warnings.join()).toMatch(/Carport/);
+  });
+
+  it('valor fixo, valor definido e desconto desligado', () => {
+    const k = [kits[1]];
+    const pr = newQuoteInput(DEFAULT_SETTINGS).pricing;
+    const fixo = calculate(limited({ pricing: { ...pr, mode: 'fixo', closedPrice: 25000 } }), k);
+    expect([fixo.finalPrice, fixo.tablePrice, fixo.discountShown]).toEqual([25000, 25000, 0]);
+    expect(fixo.commission.overprice).toBe(1050);
+    const def = calculate(limited({ pricing: { ...pr, mode: 'definido', closedPrice: 25000, shownDiscount: 3000 } }), k);
+    expect([def.finalPrice, def.tablePrice, def.discountShown, def.commission.overprice]).toEqual([25000, 28000, 3000, 0]);
+    const off = calculate(limited({ pricing: { ...pr, anchoring: 2000, discount: 1500, discountOff: true } }), k);
+    expect([off.finalPrice, off.discountShown]).toEqual([24900, 0]);
+  });
+
+  it('orçamento salvo antes dos limites continua igual', () => {
+    const base = limited({ grid: 'mono', billValue: 1500, moduleBrand: 'WEG' });
+    const { gridLimits, inverterLimits, roofExtras, moduleBrandExtras, inverterBrandExtras, ...old } = base.params;
+    expect(calculate({ ...base, params: old }, big).kit?.id).toBe('g');
+    expect(calculate({ ...base, params: old }, big).basePrice).toBe(60000);
+  });
+
+  it('ampliação conta o que o cliente já tem', () => {
+    const r = calculate(limited({ systemType: 'ampliacao', billValue: 300, existing: { modules: 10, w: 610 } }), big);
+    expect(r.modules).toBe(6);
+    expect(r.totalModules).toBe(16);
+    expect(r.existingKwh).toBe(763);
+  });
+
+  it('a projeção vai de 6 a 10 anos', () => {
+    expect(horizonYears(null)).toBe(6);
+    expect(horizonYears(68)).toBe(8);
+    expect(horizonYears(200)).toBe(10);
+  });
+
+  it('ao sair, só guarda o que foi mexido e nunca a venda fechada', () => {
+    const a = limited();
+    const saved = { id: 'p', input: a } as never;
+    expect(keepOnLeave(a, undefined, undefined)).toBe(true);
+    expect(keepOnLeave({ ...a }, saved, { soldProposalId: null })).toBe(false);
+    expect(keepOnLeave({ ...a, billValue: 1 }, saved, { soldProposalId: null })).toBe(true);
+    expect(keepOnLeave({ ...a, billValue: 1 }, saved, { soldProposalId: 'p' })).toBe(false);
   });
 });

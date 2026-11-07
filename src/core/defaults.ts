@@ -29,6 +29,13 @@ export const DEFAULT_SETTINGS: Settings = {
   nextProposalNumber: 1,
   lastBackupAt: null,
   contractTemplate: null,
+  gridLimits: { mono: { inverterKw: 7.5, modules: 24 }, bi: { inverterKw: 15, modules: 30 }, tri: { inverterKw: 150, modules: 371 } },
+  inverterLimits: {},
+  roofExtras: {},
+  moduleBrandExtras: { Trina: 0, DMEGC: 0, WEG: 1000 },
+  inverterBrandExtras: { SAJ: 0, SOFAR: 0, WEG: 1000 },
+  panelPowers: [585, 610, 700],
+  marginOptions: [30, 40, 50],
 };
 
 export function paramsFrom(s: Settings): CalcParams {
@@ -50,6 +57,11 @@ export function paramsFrom(s: Settings): CalcParams {
     hybridCostHigh: s.hybridCostHigh,
     batteryPrice: s.batteryPrice,
     expansionModulePrice: s.expansionModulePrice,
+    gridLimits: s.gridLimits,
+    inverterLimits: s.inverterLimits,
+    roofExtras: s.roofExtras,
+    moduleBrandExtras: s.moduleBrandExtras,
+    inverterBrandExtras: s.inverterBrandExtras,
   };
 }
 
@@ -126,6 +138,4 @@ export const PROPOSAL_STATUS_LABEL: Record<ProposalStatus, string> = {
   recusado: 'Recusado',
 };
 
-export const MODULE_BRANDS = ['Trina', 'DMEGC', 'WEG'];
-export const INVERTER_BRANDS = ['SAJ', 'SOFAR', 'WEG'];
 export const INSTALLMENT_OPTIONS = [12, 24, 36, 48, 60, 72, 84, 96];

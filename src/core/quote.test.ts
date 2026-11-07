@@ -15,6 +15,11 @@ describe('orçamento de cada cliente', () => {
     expect(d.input.pricing.discount).toBe(200);
   });
 
+  it('recusar um orçamento antigo não faz ele reabrir', () => {
+    const list = [{ ...proposal('nova', 'a', '2026-11-05', 1), status: 'enviado' }, { ...proposal('velha', 'a', '2026-11-07', 2), issuedAt: '2026-11-01', status: 'recusado' }] as Proposal[];
+    expect(draftForClient({ leadId: 'b', proposalId: null, input: input() }, 'a', list, DEFAULT_SETTINGS).proposalId).toBe('nova');
+  });
+
   it('cliente sem orçamento não herda valores de outro cliente', () => {
     const d = draftForClient({ leadId: 'b', proposalId: 'b1', input: input({ pricing: { mode: 'tabela', anchoring: 900, discount: 300, closedPrice: null }, params: { ...newQuoteInput(DEFAULT_SETTINGS).params, taxPct: 99 } }) }, 'c', saved, DEFAULT_SETTINGS);
     expect(d).toMatchObject({ leadId: 'c', proposalId: null });

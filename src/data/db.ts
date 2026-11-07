@@ -72,15 +72,6 @@ export async function remove(store: StoreName, key: string): Promise<void> {
   return done(tx);
 }
 
-export async function removeMany(store: StoreName, keys: string[]): Promise<void> {
-  if (keys.length === 0) return;
-  const db = await open();
-  const tx = db.transaction(store, 'readwrite');
-  const os = tx.objectStore(store);
-  for (const k of keys) os.delete(k);
-  return done(tx);
-}
-
 export async function clear(store: StoreName): Promise<void> {
   const db = await open();
   const tx = db.transaction(store, 'readwrite');
@@ -92,7 +83,12 @@ export async function clear(store: StoreName): Promise<void> {
 export async function transact(stores: StoreName[], write: (tx: IDBTransaction) => void): Promise<void> {
   const db = await open();
   const tx = db.transaction(stores, 'readwrite');
-  write(tx);
+  try {
+    write(tx);
+  } catch (e) {
+    tx.abort();
+    throw e;
+  }
   return done(tx);
 }
 

@@ -87,6 +87,17 @@ describe('backup atual', () => {
     expect(await file.blob.text()).toBe('oi');
   });
 
+  it('linha com defeito não apaga nada', async () => {
+    await restoreBackup(atual());
+    const bad = atual({ leads: [{ name: 'sem id' } as never] });
+    await expect(restoreBackup(bad)).rejects.toThrow();
+    expect(await db.getAll('kits')).toEqual([kit]);
+    expect(await db.getAll('leads')).toEqual([]);
+    await restoreBackup(atual({ leads: [{ id: 'l1', name: 'Ana' } as never] }));
+    await expect(restoreBackup(bad)).rejects.toThrow();
+    expect(await db.getAll('leads')).toHaveLength(1);
+  });
+
   it('anexo ilegível não apaga nada', async () => {
     await restoreBackup(atual());
     await expect(restoreBackup(atual({ kits: [], files: [{ id: 'f1', type: 'image/png', dataUrl: 'nao-e-dado' }] }))).rejects.toThrow();

@@ -1,12 +1,8 @@
 const brl0 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-const brl2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-/** "R$ 23.400" (sem centavos) ou "R$ 23.400,50" quando houver centavos e cents=true */
-export function brl(value: number, cents = false): string {
-  const v = Number.isFinite(value) ? value : 0;
-  const hasCents = Math.round(v * 100) % 100 !== 0;
-  const body = cents && hasCents ? brl2.format(v) : brl0.format(Math.round(v));
-  return `R$ ${body}`;
+/** "R$ 23.400", sem centavos */
+export function brl(value: number): string {
+  return `R$ ${brl0.format(Math.round(Number.isFinite(value) ? value : 0))}`;
 }
 
 export function num(value: number, decimals = 0): string {

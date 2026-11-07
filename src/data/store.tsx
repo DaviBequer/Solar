@@ -6,7 +6,7 @@ import { uid } from '../core/format';
 import * as db from './db';
 import { buildBackup, restoreBackup, type Backup } from './backup';
 import { commissionAfterEdit } from '../core/sale';
-import { draftForClient } from '../core/quote';
+import { draftForClient, keepOnLeave } from '../core/quote';
 import { parseKitsCsv } from '../core/csv';
 import defaultKitsCsv from './default-kits.csv?raw';
 
@@ -35,6 +35,7 @@ interface StoreValue {
   newDraft: (leadId?: string | null) => void;
   openProposalInDraft: (p: Proposal) => Promise<void>;
   selectClient: (leadId: string) => Promise<void>;
+  keepCurrentClient: () => Promise<void>;
   saveDraftAsProposal: () => Promise<Proposal | null>;
   setProposalStatus: (id: string, status: ProposalStatus) => Promise<void>;
   deleteProposal: (id: string) => Promise<void>;
@@ -104,7 +105,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setLeads(l);
       setProposals(p);
       setTasks(t);
-      if (d?.input) setDraftState({ ...d, input: { ...newQuoteInput(st), ...d.input, params: { ...newQuoteInput(st).params, ...d.input.params } } });
+      // Orçamento já salvo fica como está; só o rascunho novo recebe os campos que faltam
+      if (d?.input) setDraftState(d.proposalId ? d : { ...d, input: { ...newQuoteInput(st), ...d.input, params: { ...newQuoteInput(st).params, ...d.input.params } } });
       else setDraftState({ leadId: null, proposalId: null, input: newQuoteInput(st) });
       setReady(true);
       db.requestPersistence();
@@ -233,7 +235,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   /** Antes de sair do orçamento de um cliente, guarda o que foi mexido nele. */
   const keepCurrentClient = useCallback(async () => {
     const d = draftRef.current;
-    if (d.leadId && calculate(d.input, kitsRef.current).ready) await saveDraftAsProposal();
+    if (!d.leadId || !calculate(d.input, kitsRef.current).ready) return;
+    const saved = d.proposalId ? await db.get<Proposal>('proposals', d.proposalId) : undefined;
+    if (keepOnLeave(d.input, saved, leadsRef.current.find((l) => l.id === d.leadId))) await saveDraftAsProposal();
   }, [saveDraftAsProposal]);
 
   const openProposalInDraft = useCallback(async (p: Proposal) => {
@@ -329,10 +333,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     () => ({
       ready, settings, kits, leads, proposals, tasks, draft,
       updateSettings, replaceKits, saveKit, deleteKit, createLead, updateLead, deleteLead,
-      setDraft, newDraft, openProposalInDraft, selectClient, saveDraftAsProposal, setProposalStatus, deleteProposal, closeSale, undoSale,
+      setDraft, newDraft, openProposalInDraft, selectClient, keepCurrentClient, saveDraftAsProposal, setProposalStatus, deleteProposal, closeSale, undoSale,
       saveTask, deleteTask, addAttachment, removeAttachment, fileUrl, exportBackup, importBackup,
     }),
-    [ready, settings, kits, leads, proposals, tasks, draft, updateSettings, replaceKits, saveKit, deleteKit, createLead, updateLead, deleteLead, setDraft, newDraft, openProposalInDraft, selectClient, saveDraftAsProposal, setProposalStatus, deleteProposal, closeSale, undoSale, saveTask, deleteTask, addAttachment, removeAttachment, fileUrl, exportBackup, importBackup],
+    [ready, settings, kits, leads, proposals, tasks, draft, updateSettings, replaceKits, saveKit, deleteKit, createLead, updateLead, deleteLead, setDraft, newDraft, openProposalInDraft, selectClient, keepCurrentClient, saveDraftAsProposal, setProposalStatus, deleteProposal, closeSale, undoSale, saveTask, deleteTask, addAttachment, removeAttachment, fileUrl, exportBackup, importBackup],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

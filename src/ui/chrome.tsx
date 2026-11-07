@@ -1,4 +1,4 @@
-import { BarChart3, CalendarDays, SlidersHorizontal, Sun, Users } from 'lucide-react';
+import { CalendarDays, ChartPie, Handshake, Settings2, Sunrise } from 'lucide-react';
 import logo from '../logo.png';
 import { navigate, type RouteName } from '../router';
 
@@ -13,18 +13,18 @@ export function TopBar() {
         <span className="ver" aria-label={`Versão ${__APP_VERSION__}`}>{APP_VERSION}</span>
       </div>
       <button className="icon-btn" aria-label="Ajustes" onClick={() => navigate('/ajustes')}>
-        <SlidersHorizontal size={20} />
+        <Settings2 size={20} />
       </button>
     </header>
   );
 }
 
-const TABS: { name: RouteName; label: string; path: string; Icon: typeof Sun; sideOnly?: boolean }[] = [
-  { name: 'orcamento', label: 'Orçamento', path: '/orcamento', Icon: Sun },
-  { name: 'clientes', label: 'Clientes', path: '/clientes', Icon: Users },
+const TABS: { name: RouteName; label: string; path: string; Icon: typeof Sunrise; sideOnly?: boolean }[] = [
+  { name: 'orcamento', label: 'Orçamento', path: '/orcamento', Icon: Sunrise },
+  { name: 'clientes', label: 'Clientes', path: '/clientes', Icon: Handshake },
   { name: 'agenda', label: 'Agenda', path: '/agenda', Icon: CalendarDays },
-  { name: 'painel', label: 'Painel', path: '/painel', Icon: BarChart3 },
-  { name: 'ajustes', label: 'Ajustes', path: '/ajustes', Icon: SlidersHorizontal, sideOnly: true },
+  { name: 'painel', label: 'Painel', path: '/painel', Icon: ChartPie },
+  { name: 'ajustes', label: 'Ajustes', path: '/ajustes', Icon: Settings2, sideOnly: true },
 ];
 
 /** Abas embaixo no celular, menu lateral no computador. Fora das abas, só aparece no computador. */
@@ -45,7 +45,7 @@ export function TabBar({ active, desktopOnly }: { active: RouteName; desktopOnly
           onClick={() => current !== name && navigate(path, true)}
         >
           <span className="ico">
-            <Icon size={22} />
+            <Icon size={20} />
           </span>
           {label}
         </button>

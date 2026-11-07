@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import '@fontsource-variable/lexend';
+import '@fontsource-variable/plus-jakarta-sans';
 import './styles.css';
 import { registerSW } from 'virtual:pwa-register';
 import App from './App';

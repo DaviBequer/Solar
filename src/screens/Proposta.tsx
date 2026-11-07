@@ -5,6 +5,7 @@ import { useToast } from '../ui/kit';
 import { goBack, navigate } from '../router';
 import { whatsappUrl } from '../core/links';
 import { ProposalDoc } from './ProposalDoc';
+import { deliverFile } from '../ui/deliver';
 
 async function makePdf(source: HTMLElement): Promise<Blob> {
   const { default: html2pdf } = await import('html2pdf.js');
@@ -103,25 +104,14 @@ export default function Proposta({ id }: { id: string }) {
       const file = new File([blob], fileName, { type: 'application/pdf' });
       const first = lead?.name.split(' ')[0] ?? '';
       const text = `Olá${first ? `, ${first}` : ''}! Segue a sua proposta de energia solar.`;
-      if (navigator.canShare?.({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: 'Proposta de energia solar', text });
-          await markSent();
-        } catch {
-          /* compartilhamento cancelado */
-        }
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 4000);
+      const how = await deliverFile(file, 'Proposta de energia solar', text);
+      if (how === 'cancelled') return;
+      if (how === 'downloaded') {
         const phone = lead?.phone.replace(/\D/g, '');
         if (phone) window.open(whatsappUrl(phone, text), '_blank');
         toast('PDF baixado. Anexe na conversa do WhatsApp.');
-        await markSent();
       }
+      await markSent();
     } catch {
       toast('Não foi possível gerar o PDF');
     } finally {

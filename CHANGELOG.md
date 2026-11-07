@@ -1,5 +1,13 @@
 # Versões
 
+## 3.1.0 — 7 de novembro de 2026
+
+- Tela de Orçamento nova, como no protótipo aprovado: casa com o dia animado, ordem cliente, tipo, instalação e conta, casa, sistema, retorno e valor. Três colunas com a casa no meio em telas grandes.
+- Rede e inversor limitam o kit, e os limites são editáveis. Marca do módulo, marca do inversor, telhado e carport podem somar valor. Ampliação informa o que o cliente já tem.
+- Valor fixo, valor definido à mão e toque no valor para ligar ou desligar o desconto. Taxas fixas por cliente em Configurar proposta.
+- Papel amassado no fundo, fonte Plus Jakarta Sans e os ícones escolhidos em todo o app.
+- Correções da auditoria: orçamento antigo e venda fechada não mudam sozinhos ao trocar de cliente. Backup com defeito não apaga mais nada. Orçamento recusado não reabre. Fotos de anexo ficam menores para o backup não falhar. Enviar a proposta baixa o PDF se o celular recusar. Usar GPS não troca endereço já preenchido. A publicação para se encontrar arquivo suspeito.
+
 ## 3.0.6 — 7 de novembro de 2026
 
 - Cada cliente tem o seu orçamento. Ao escolher um cliente, abre o último salvo dele, com ancoragem, desconto e taxas. Cliente novo começa limpo, sem valores de outro.

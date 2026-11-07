@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Bell, ChevronLeft, ChevronRight, LocateFixed, MapPin, MessageCircle, MoreHorizontal, Navigation, Phone, Plus, Share2, Sun, Trash2 } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight, LocateFixed, MapPin, MessageCircle, MoreHorizontal, Navigation, Phone, Plus, Share2, Sunrise, Trash2 } from 'lucide-react';
 import { Field, Sheet, useConfirm, useToast } from '../ui/kit';
 import { nextTaskOf, useStore } from '../data/store';
 import { isSoldProposal, proposalsOf, saleCommission } from '../core/sale';
@@ -81,7 +81,8 @@ export default function Ficha({ id }: { id: string }) {
       async (pos) => {
         const { latitude, longitude } = pos.coords;
         let address = lead.address;
-        try {
+        // Endereço já preenchido fica: ele vai para o contrato, e o GPS só estima
+        if (!address.trim()) try {
           const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=pt-BR`);
           const data = await res.json();
           const a = data?.address ?? {};
@@ -172,7 +173,7 @@ export default function Ficha({ id }: { id: string }) {
           {phone ? <a href={whatsappUrl(phone)} target="_blank" rel="noreferrer"><MessageCircle size={20} />WhatsApp</a> : <button onClick={() => setSheet('edit')}><MessageCircle size={20} />WhatsApp</button>}
           {phone ? <a href={`tel:${phone}`}><Phone size={20} />Ligar</a> : <button onClick={() => setSheet('edit')}><Phone size={20} />Ligar</button>}
           {maps ? <a href={maps} target="_blank" rel="noreferrer"><Navigation size={20} />Rota</a> : <button onClick={() => setSheet('edit')}><Navigation size={20} />Rota</button>}
-          <button className="main" onClick={async () => { await selectClient(lead.id); navigate('/orcamento', true); }}><Sun size={20} />Orçamento</button>
+          <button className="main" onClick={async () => { await selectClient(lead.id); navigate('/orcamento', true); }}><Sunrise size={20} />Orçamento</button>
         </div>
 
         {next ? (

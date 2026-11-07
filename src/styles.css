@@ -1,14 +1,14 @@
 :root {
   --bg: #f2f3f6;
   --surface: #ffffff;
-  --ink: #14213f;
+  --ink: #1b2a49;
   --ink-2: #2e3a55;
   --muted: #5d6475;
   --line: #e3e5eb;
   --line-2: #dde1e9;
   --rule: #eef0f4;
   --tint: #e7eaf1;
-  --gold: #c6a15b;
+  --gold: #c4a462;
   --gold-soft: #f1e6cf;
   --gold-ink: #7a5d24;
   --gold-ink-2: #6e5320;
@@ -27,7 +27,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); }
 body {
-  font-family: 'Lexend Variable', 'Lexend', system-ui, sans-serif;
+  font-family: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, sans-serif;
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
@@ -340,3 +340,15 @@ textarea.input { height: auto; min-height: 84px; padding: 12px 14px; resize: ver
 /* Sem barra de rolagem: rola com o dedo ou com a roda do mouse */
 html, body, * { scrollbar-width: none; }
 ::-webkit-scrollbar { display: none; }
+
+/* Papel amassado no fundo de todas as telas */
+html { background: #fbfbfd; }
+body, .app { background: transparent; box-shadow: none; }
+.paper { position: fixed; inset: 0; z-index: -1; background-color: #fbfbfd; background-size: cover; background-position: center; }
+
+/* Ícones do menu no estilo azul: marinho com desenho dourado; o atual acende em dourado */
+.tab .ico { width: 34px; height: 34px; border-radius: 10px; background: var(--ink); color: #e8c885; }
+.tab[aria-current='page'] .ico, .tab[aria-current='page']:hover .ico { background: radial-gradient(circle at 35% 30%, #f7e4b6, var(--gold)); color: var(--ink); }
+@media (min-width: 900px) {
+  .tabbar, .tabbar.desktop-only { background: rgba(255, 255, 255, 0.92); }
+}

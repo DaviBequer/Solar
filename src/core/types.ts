@@ -1,7 +1,8 @@
 export type SystemType = 'ongrid' | 'hibrido' | 'bateria' | 'ampliacao';
 export type Roof = 'ceramica' | 'fibrocimento' | 'metalico' | 'laje' | 'solo' | 'carport';
 export type Grid = 'mono' | 'bi' | 'tri';
-export type PanelW = 585 | 610 | 700;
+/** Potência do módulo em W. A tabela de kits traz 585, 610 e 700; outras valem para ampliação. */
+export type PanelW = number;
 export type PayMethod = 'vista' | 'financiado' | 'entrada';
 export type LeadStatus = 'novo' | 'negociando' | 'vendido' | 'perdido';
 export type ProposalStatus = 'rascunho' | 'enviado' | 'aprovado' | 'recusado';
@@ -41,6 +42,13 @@ export interface CalcParams {
   hybridCostHigh: number;
   batteryPrice: number;
   expansionModulePrice: number;
+  /** Limites e acréscimos. Ausentes em orçamentos de antes da v3.1: esses não têm limite nem acréscimo. */
+  gridLimits?: Record<Grid, { inverterKw: number; modules: number }>;
+  /** Módulos por tamanho de inversor em kW. Tamanho sem valor não tem limite. */
+  inverterLimits?: Record<string, number>;
+  roofExtras?: Partial<Record<Roof, number>>;
+  moduleBrandExtras?: Record<string, number>;
+  inverterBrandExtras?: Record<string, number>;
 }
 
 export interface Settings extends CalcParams {
@@ -56,6 +64,9 @@ export interface Settings extends CalcParams {
   lastBackupAt: string | null;
   /** Modelo de contrato importado. Fica só no aparelho: o repositório do app é público. */
   contractTemplate: string | null;
+  panelPowers: number[];
+  /** Opções de folga além de 0, 10 e 20% */
+  marginOptions: number[];
 }
 
 export interface QuoteInput {
@@ -72,11 +83,20 @@ export interface QuoteInput {
   manualModules: number | null;
   manualInverter: string | null;
   batteries: number;
+  /** Orçamento da estrutura metálica, quando o telhado é carport */
+  carportPrice?: number;
+  /** O que o cliente já tem, em uma ampliação */
+  existing?: { modules: number; w: number };
   pricing: {
-    mode: 'tabela' | 'fechado';
+    /** fechado: como antes da v3.1. fixo: o valor é o preço, sem desconto. definido: valor e desconto digitados. */
+    mode: 'tabela' | 'fechado' | 'fixo' | 'definido';
     anchoring: number;
     discount: number;
     closedPrice: number | null;
+    /** Desconto mostrado no modo definido */
+    shownDiscount?: number;
+    /** Mostra o valor sem o desconto */
+    discountOff?: boolean;
   };
   payment: {
     method: PayMethod;
@@ -127,6 +147,9 @@ export interface QuoteResult {
   paybackMonths: number | null;
   commission: Commission;
   warnings: string[];
+  /** Ampliação: geração e módulos contando o que o cliente já tem */
+  existingKwh?: number;
+  totalModules?: number;
 }
 
 export interface LeadRecord {

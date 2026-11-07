@@ -1,6 +1,7 @@
 import { useRoute } from './router';
 import { useStore } from './data/store';
 import { TabBar } from './ui/chrome';
+import { Paper } from './ui/paper';
 import { useReminders } from './reminders';
 import Orcamento from './screens/Orcamento';
 import Clientes from './screens/Clientes';
@@ -24,6 +25,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <Paper />
       {route.name === 'orcamento' && <Orcamento />}
       {route.name === 'clientes' && <Clientes />}
       {route.name === 'cliente' && route.id && <Ficha key={route.id} id={route.id} />}

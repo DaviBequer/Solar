@@ -11,8 +11,9 @@ import { parseBackup } from '../data/backup';
 import { askNotificationPermission } from '../reminders';
 import { APP_VERSION } from '../ui/chrome';
 import { DOCX_TYPE, deliverFile } from '../ui/deliver';
+import { logoDataUrl } from '../ui/images';
 
-type NumKey = { [K in keyof Settings]: Settings[K] extends number ? K : never }[keyof Settings];
+type NumKey = { [K in keyof Settings]-?: Settings[K] extends number ? K : never }[keyof Settings];
 interface NumSpec { key: NumKey; label: string; prefix?: string; suffix?: string; decimals?: number }
 
 const GROUPS: Record<string, { title: string; hint?: string; fields: NumSpec[] }> = {
@@ -77,23 +78,6 @@ function Row({ label, value, sub, onClick }: { label: string; value?: ReactNode;
   );
 }
 
-function resizeImage(file: File, max = 480): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.min(1, max / Math.max(img.width, img.height));
-      const c = document.createElement('canvas');
-      c.width = Math.round(img.width * scale);
-      c.height = Math.round(img.height * scale);
-      c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
-      resolve(c.toDataURL('image/png'));
-      URL.revokeObjectURL(img.src);
-    };
-    img.onerror = reject;
-    img.src = URL.createObjectURL(file);
-  });
-}
-
 export default function Ajustes() {
   const { settings, updateSettings, kits, setDraft, exportBackup, importBackup } = useStore();
   const toast = useToast();
@@ -130,25 +114,10 @@ export default function Ajustes() {
       const d = new Date();
       const name = `sonit-backup-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}.json`;
       const file = new File([json], name, { type: 'application/json' });
-      let shared = false;
-      if (navigator.canShare?.({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: 'Backup do Sonit' });
-          shared = true;
-        } catch {
-          /* se cancelar, baixa o arquivo */
-        }
-      }
-      if (!shared) {
-        const url = URL.createObjectURL(file);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = name;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
-        toast('Backup baixado');
-      }
-      // Só agora: se a geração falhar, o aviso de 7 dias continua aparecendo
+      const how = await deliverFile(file, 'Backup do Sonit');
+      if (how === 'cancelled') return;
+      if (how === 'downloaded') toast('Backup baixado');
+      // Só agora: se a geração falhar ou for cancelada, o aviso de 7 dias continua aparecendo
       await updateSettings({ lastBackupAt: b.exportedAt });
     } catch {
       toast('Não foi possível gerar o backup');
@@ -217,7 +186,7 @@ export default function Ajustes() {
             const f = e.target.files?.[0];
             e.target.value = '';
             if (!f) return;
-            await updateSettings({ companyLogo: await resizeImage(f) });
+            await updateSettings({ companyLogo: await logoDataUrl(f) });
             toast('Logo salva');
           }}
         />

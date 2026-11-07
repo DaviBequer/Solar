@@ -3,6 +3,7 @@ import { Camera, FileText, Trash2, X } from 'lucide-react';
 import { useConfirm, useToast } from '../ui/kit';
 import { useStore } from '../data/store';
 import { useLayer } from '../router';
+import { shrinkPhoto } from '../ui/images';
 import type { Attachment, Lead } from '../core/types';
 
 const isImage = (a: Attachment) => a.type.startsWith('image/');
@@ -40,7 +41,7 @@ export function Attachments({ lead }: { lead: Lead }) {
           const f = e.target.files?.[0];
           e.target.value = '';
           if (!f) return;
-          await addAttachment(lead.id, f);
+          await addAttachment(lead.id, await shrinkPhoto(f));
           toast('Anexo salvo');
         }}
       />

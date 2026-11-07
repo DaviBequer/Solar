@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Plus, Search, Share2 } from 'lucide-react';
+import { Search, Share2, CirclePlus } from 'lucide-react';
 import { TopBar } from '../ui/chrome';
 import { useToast } from '../ui/kit';
 import { lastActivity, nextTaskOf, useStore } from '../data/store';
@@ -88,7 +88,7 @@ export default function Clientes() {
             <Search size={18} aria-hidden="true" />
             <input className="input" placeholder="Buscar por nome ou telefone" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Buscar cliente" />
           </div>
-          <button className="icon-btn add" aria-label="Novo cliente" title="Novo cliente" onClick={() => setCreating(true)}><Plus size={22} /></button>
+          <button className="icon-btn add" aria-label="Novo cliente" title="Novo cliente" onClick={() => setCreating(true)}><CirclePlus size={22} /></button>
         </div>
 
         {!q && (

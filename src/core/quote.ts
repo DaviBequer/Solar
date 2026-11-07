@@ -1,5 +1,7 @@
+import { allowedKits, kitKw, kitPanel, panelCount } from './calc';
 import { DEFAULT_SETTINGS, newQuoteInput, paramsFrom } from './defaults';
-import type { CalcParams, Proposal, QuoteInput, QuoteResult, Settings } from './types';
+import { currentProposal } from './sale';
+import type { CalcParams, Kit, Lead, Proposal, QuoteInput, QuoteResult, Settings } from './types';
 
 const PARAM_KEYS = Object.keys(paramsFrom(DEFAULT_SETTINGS)) as (keyof CalcParams)[];
 
@@ -7,7 +9,7 @@ const PARAM_KEYS = Object.keys(paramsFrom(DEFAULT_SETTINGS)) as (keyof CalcParam
 export function withSettings<D extends { proposalId: string | null; input: QuoteInput }>(draft: D, patch: Partial<Settings>): D {
   if (draft.proposalId) return draft;
   const params = { ...draft.input.params };
-  for (const k of PARAM_KEYS) if (patch[k] !== undefined) params[k] = patch[k] as number;
+  for (const k of PARAM_KEYS) if (patch[k] !== undefined) (params as Record<string, unknown>)[k] = patch[k];
   const payment = {
     ...draft.input.payment,
     ...(patch.interestRate !== undefined ? { interestRate: patch.interestRate } : {}),
@@ -24,15 +26,44 @@ export function withSettings<D extends { proposalId: string | null; input: Quote
 export function draftForClient<D extends { leadId: string | null; proposalId: string | null; input: QuoteInput }>(draft: D, leadId: string, proposals: Proposal[], settings: Settings): D | { leadId: string; proposalId: string | null; input: QuoteInput } {
   if (draft.leadId === leadId) return draft;
   if (!draft.leadId && draft.input.billValue > 0) return { ...draft, leadId, proposalId: null };
-  const latest = proposals.filter((p) => p.leadId === leadId).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+  const latest = currentProposal(proposals, leadId);
   if (latest) return { leadId, proposalId: latest.id, input: structuredClone(latest.input) };
   return { leadId, proposalId: null, input: newQuoteInput(settings, draft.input) };
 }
 
+/** Compara ignorando a ordem das chaves: o rascunho reaberto pode vir com outra ordem. */
+const canon = (v: unknown): string => JSON.stringify(v, (_, x) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => a.localeCompare(b))) : x));
+
 /**
- * Soma ou tira um módulo a partir do que está na tela.
- * Fixa a potência em uso: o kit pode ter vindo de outra potência, e a quantidade só vale com ela.
+ * Ao sair do orçamento sem pedir para salvar: guarda só o que foi mexido.
+ * Tabela nova não reescreve orçamento antigo, e venda fechada só muda salvando de propósito.
  */
-export function stepModules(input: QuoteInput, result: QuoteResult, delta: number): Partial<QuoteInput> {
-  return { manualModules: Math.max(1, (input.manualModules ?? result.modules) + delta), manualInverter: null, panelW: result.panelW };
+export function keepOnLeave(input: QuoteInput, saved: Proposal | undefined, lead: Pick<Lead, 'soldProposalId'> | undefined): boolean {
+  if (!saved) return true;
+  return saved.id !== lead?.soldProposalId && canon(saved.input) !== canon(input);
 }
+
+/** Passa para o kit seguinte da tabela, dentro dos limites. Em ampliação, um módulo por vez. Sem próximo, devolve null. */
+export function stepKit(input: QuoteInput, result: QuoteResult, kits: Kit[], delta: number): Partial<QuoteInput> | null {
+  if (input.systemType === 'ampliacao') return { manualModules: Math.max(1, (input.manualModules ?? result.modules) + delta) };
+  const counts = [...new Set(allowedKits(kits, input).map((k) => panelCount(k, result.panelW)).filter(Boolean))].sort((a, b) => a - b);
+  const next = counts[counts.indexOf(result.modules) + delta];
+  return next ? { manualModules: next, manualInverter: null, panelW: result.panelW } : null;
+}
+
+/** Tamanhos de inversor permitidos, do menor para o maior. */
+export function inverterSizes(input: QuoteInput, kits: Kit[]): number[] {
+  return [...new Set(allowedKits(kits, input).map((k) => kitKw(k.inverter)))].sort((a, b) => a - b);
+}
+
+/** Fixa o tamanho do inversor: o menor kit desse tamanho que cobre a conta, ou o maior deles. */
+export function pickInverter(input: QuoteInput, result: QuoteResult, kits: Kit[], kw: number): Partial<QuoteInput> | null {
+  const list = allowedKits(kits, input).filter((k) => kitKw(k.inverter) === kw).sort((a, b) => a.gm - b.gm);
+  const kit = list.find((k) => k.gm >= result.targetKwh) ?? list.at(-1);
+  if (!kit) return null;
+  const panelW = kitPanel(kit, input.panelW);
+  return { manualModules: panelCount(kit, panelW), manualInverter: kit.inverter, panelW };
+}
+
+/** Anos da projeção: mínimo de 6, retorno + 2 de folga, máximo de 10. */
+export const horizonYears = (paybackMonths: number | null) => (paybackMonths === null ? 6 : Math.min(10, Math.max(6, Math.ceil(paybackMonths / 12) + 2)));

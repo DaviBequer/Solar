@@ -60,7 +60,7 @@ export function ContractSheet({ open, onClose, lead, proposal }: { open: boolean
         const { contractPdf } = await import('../core/contract-pdf');
         file = new File([(await contractPdf(blocks, settings.companyLogo)).output('blob')], `${name}.pdf`, { type: 'application/pdf' });
       }
-      if (!(await deliverFile(file, 'Contrato'))) toast('Contrato baixado');
+      if ((await deliverFile(file, 'Contrato')) === 'downloaded') toast('Contrato baixado');
       onClose();
     } catch {
       toast('Não foi possível gerar o contrato');

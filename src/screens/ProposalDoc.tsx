@@ -3,12 +3,29 @@ import type { Lead, Proposal, Settings } from '../core/types';
 import { proposalContent } from '../core/proposal';
 import { GRID_LABEL, ROOF_LABEL, SYSTEM_LABEL } from '../core/defaults';
 import { brl, dateLong, monthsText, MONTHS, num } from '../core/format';
-import { Gauge } from './Orcamento';
 
 interface Props {
   proposal: Proposal;
   lead: Lead | null;
   settings: Settings;
+}
+
+function Gauge({ consumption, generation }: { consumption: number; generation: number }) {
+  const max = Math.max(consumption, generation, 1);
+  const fill = generation / max;
+  const tick = consumption / max;
+  const pt = (f: number, r: number) => [150 - r * Math.cos(Math.PI * f), 150 - r * Math.sin(Math.PI * f)];
+  const [ex, ey] = pt(fill, 120);
+  const [ix, iy] = pt(tick, 104);
+  const [ox, oy] = pt(tick, 136);
+  return (
+    <svg width="350" height="172" viewBox="0 0 300 160" aria-hidden="true">
+      <path d="M 30 150 A 120 120 0 0 1 270 150" fill="none" stroke="#33466F" strokeWidth="14" strokeLinecap="round" />
+      {fill > 0.005 && <path d={`M 30 150 A 120 120 0 0 1 ${ex.toFixed(1)} ${ey.toFixed(1)}`} fill="none" stroke="#C6A15B" strokeWidth="14" strokeLinecap="round" />}
+      {consumption > 0 && <line x1={ix} y1={iy} x2={ox} y2={oy} stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" />}
+      {fill > 0.005 && <circle cx={ex} cy={ey} r="11" fill="#C6A15B" stroke="#14213F" strokeWidth="4" />}
+    </svg>
+  );
 }
 
 const row = { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '9px 0', borderBottom: '1px solid #EEF0F4', fontSize: 16, gap: 16 } as const;
@@ -42,7 +59,7 @@ export const ProposalDoc = forwardRef<HTMLDivElement, Props>(function ProposalDo
         <div style={{ position: 'relative', width: 250, height: 150, flexShrink: 0 }}>
           <div style={{ position: 'absolute', left: 0, top: 0, width: 250, height: 140 }}>
             <div style={{ transform: 'scale(0.7143)', transformOrigin: 'top left', width: 350 }}>
-              <Gauge consumption={r.consumptionKwh} generation={r.generationKwh} dark />
+              <Gauge consumption={r.consumptionKwh} generation={r.generationKwh} />
             </div>
           </div>
           <div style={{ position: 'absolute', left: 0, right: 0, top: 58, textAlign: 'center' }}>

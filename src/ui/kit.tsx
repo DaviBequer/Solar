@@ -4,7 +4,7 @@ import { Check, X } from 'lucide-react';
 import { useLayer } from '../router';
 import { num, parseBR } from '../core/format';
 
-export function Sheet({ open, onClose, title, children, action }: { open: boolean; onClose: () => void; title: string; children: ReactNode; action?: ReactNode }) {
+export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
   useLayer(open, onClose);
   useEffect(() => {
     if (!open) return;
@@ -22,11 +22,9 @@ export function Sheet({ open, onClose, title, children, action }: { open: boolea
         <div className="sheet-grip" />
         <div className="sheet-head">
           <h2>{title}</h2>
-          {action ?? (
-            <button className="icon-btn sm" aria-label="Fechar" onClick={onClose}>
-              <X size={18} />
-            </button>
-          )}
+          <button className="icon-btn sm" aria-label="Fechar" onClick={onClose}>
+            <X size={18} />
+          </button>
         </div>
         {children}
       </div>

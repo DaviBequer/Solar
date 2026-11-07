@@ -11,7 +11,7 @@
     "publicar": "node scripts/publicar.mjs"
   },
   "dependencies": {
-    "@fontsource-variable/lexend": "^5.1.0",
+    "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "html2pdf.js": "^0.10.2",
     "jspdf": "^3.0.4",
     "lucide-react": "^0.460.0",

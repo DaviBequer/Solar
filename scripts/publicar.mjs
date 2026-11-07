@@ -10,6 +10,15 @@ import { join } from 'node:path';
 const run = (cmd, opts = {}) => execSync(cmd, { stdio: 'inherit', ...opts });
 const out = (cmd) => execSync(cmd, { encoding: 'utf8' }).trim();
 
+// O repositório é público: arquivo novo fora do código para a publicação, antes de mudar qualquer coisa
+const SAFE = /^(src|scripts)\/.*\.(tsx?|mjs|css|png|svg|csv)$|^public\/.*\.(png|svg|ico)$|^[^/]+\.(md|json|ts)$/;
+const SECRET = /contrato|backup|cliente|\.(docx|pdf|xlsx|b64|env)$/i;
+const suspect = out('git ls-files --others --exclude-standard').split('\n').filter((f) => f && (!SAFE.test(f) || SECRET.test(f)));
+if (suspect.length) {
+  console.error(`\nPublicação cancelada. Estes arquivos novos iriam para o repositório público:\n  ${suspect.join('\n  ')}\nTire da pasta ou coloque no .gitignore.\n`);
+  process.exit(1);
+}
+
 const args = process.argv.slice(2);
 const keep = args.includes('--manter');
 const level = args.includes('major') ? 'major' : args.includes('minor') ? 'minor' : 'patch';
