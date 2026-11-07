@@ -9,7 +9,7 @@ import { deliverFile } from '../ui/deliver';
 import { contractFile } from './contract-file';
 
 export function ContractSheet({ open, onClose, lead, proposal }: { open: boolean; onClose: () => void; lead: Lead; proposal: Proposal | null }) {
-  const { settings, updateLead } = useStore();
+  const { settings, updateLead, closeSale } = useStore();
   const toast = useToast();
   const [document, setDocument] = useState('');
   const [birthDate, setBirthDate] = useState('');
@@ -17,6 +17,8 @@ export function ContractSheet({ open, onClose, lead, proposal }: { open: boolean
   const [address, setAddress] = useState('');
   const [payment, setPayment] = useState('');
   const [busy, setBusy] = useState(false);
+  // Contrato gerado quase sempre é venda fechada: já marca, e a ficha tem o botão Cancelou
+  const [markSold, setMarkSold] = useState(true);
 
   useEffect(() => {
     if (!open || !proposal) return;
@@ -25,6 +27,7 @@ export function ContractSheet({ open, onClose, lead, proposal }: { open: boolean
     setCep(lead.cep ?? '');
     setAddress(lead.address);
     setPayment(defaultPayment(proposal));
+    setMarkSold(true);
     // shortcut: o texto do pagamento não fica salvo e volta ao padrão a cada geração; guardar se for preciso reemitir igual.
   }, [open, proposal, lead]);
 
@@ -52,7 +55,10 @@ export function ContractSheet({ open, onClose, lead, proposal }: { open: boolean
     try {
       const next: Lead = { ...lead, ...data, ...(data.address !== lead.address ? { lat: null, lng: null } : {}) };
       await updateLead(lead.id, { document: next.document, birthDate: next.birthDate, cep: next.cep, address: next.address, lat: next.lat, lng: next.lng });
-      if ((await deliverFile(await contractFile(settings, next, proposal, payment, format), 'Contrato')) === 'downloaded') toast('Contrato baixado');
+      const result = await deliverFile(await contractFile(settings, next, proposal, payment, format), 'Contrato');
+      const selling = markSold && lead.status !== 'vendido';
+      if (selling) await closeSale(lead.id, proposal.id, { value: proposal.result.commission.gross, manual: false });
+      if (result === 'downloaded' || selling) toast(selling ? 'Contrato gerado e cliente marcado como vendido' : 'Contrato baixado');
       onClose();
     } catch {
       toast('Não foi possível gerar o contrato');
@@ -101,10 +107,16 @@ export function ContractSheet({ open, onClose, lead, proposal }: { open: boolean
               {line('Pagamento', v.pagamento)}
               {line('Data', v.data)}
             </div>
-            {!settings.companyLogo && <p className="muted" style={{ fontSize: 13, marginTop: 10 }}>O contrato sairá sem logo. Escolha a logo em Ajustes.</p>}
+            {!settings.contractLogo && <p className="muted" style={{ fontSize: 13, marginTop: 10 }}>O contrato sairá sem logo. Escolha a logo do contrato em Ajustes, em Dados da empresa.</p>}
           </>
         );
       })()}
+      {lead.status !== 'vendido' && (
+        <label className="card pad mt-12" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 600 }}>
+          <input type="checkbox" checked={markSold} onChange={(e) => setMarkSold(e.target.checked)} style={{ width: 20, height: 20, accentColor: 'var(--ink)' }} />
+          Marcar o cliente como vendido
+        </label>
+      )}
       <div className="sheet-actions">
         <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
         <button className="btn btn-secondary" disabled={missing.length > 0 || busy} onClick={() => generate('word')}>Word</button>

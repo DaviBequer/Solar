@@ -1,5 +1,13 @@
 # Versões
 
+## 3.1.4 — 7 de novembro de 2026
+
+- Gerar o contrato já marca o cliente como vendido, com opção de desmarcar. Na ficha do cliente vendido, o botão Cliente cancelou desfaz a venda e manda para Perdido.
+- Ficha sem os botões de compartilhar e de três pontos. Excluir cliente virou um botão com um traço, que pede confirmação.
+- Logo do contrato separada da logo da proposta, em Ajustes, Dados da empresa.
+- No computador, o Orçamento fica: cliente, tipo, conta e sistema à esquerda; casa e valor no meio; retorno à direita.
+- Botão de pausar a casa só com os dois traços.
+
 ## 3.1.3 — 7 de novembro de 2026
 
 - Três clientes de exemplo, um à vista, um financiado e um com entrada e parcelas, cada um com orçamento pronto. Aparecem uma vez em cada aparelho e podem ser excluídos como qualquer cliente.

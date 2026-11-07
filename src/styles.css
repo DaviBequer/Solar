@@ -228,6 +228,8 @@ textarea.input { height: auto; min-height: 84px; padding: 12px 14px; resize: ver
 .quick a, .quick button { height: 64px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 11px; font-weight: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; text-decoration: none; }
 .quick .main { background: var(--ink); color: #fff; border-color: var(--ink); font-weight: 600; }
 .quick .main svg { color: var(--gold); }
+.icon-btn.del { background: transparent; border: 2px solid var(--ink); color: var(--ink); }
+.cancel-sale { background: transparent; border: 1.5px solid var(--danger, #b3362b); color: var(--danger, #b3362b); }
 .quote-card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 14px; }
 .qc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; width: 100%; border: 0; background: none; padding: 0; text-align: left; color: inherit; font: inherit; }
 .qc-top > span:first-child { min-width: 0; }

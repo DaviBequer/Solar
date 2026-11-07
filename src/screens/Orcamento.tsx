@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AudioWaveform, BadgeDollarSign, BatteryCharging, CalendarDays, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, CirclePause, CirclePlay, CirclePlus, Cpu, FileUp, Grid2x2Plus, HandCoins, Plus, ReceiptText, Save, ScrollText, SlidersHorizontal, UtilityPole, Warehouse, X } from 'lucide-react';
+import { AudioWaveform, BadgeDollarSign, BatteryCharging, CalendarDays, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, CirclePlus, Cpu, FileUp, Grid2x2Plus, HandCoins, Pause, Play, Plus, ReceiptText, Save, ScrollText, SlidersHorizontal, UtilityPole, Warehouse, X } from 'lucide-react';
 import { TopBar } from '../ui/chrome';
 import { useToast } from '../ui/kit';
 import { useStore } from '../data/store';
@@ -180,13 +180,25 @@ function Scene({ total, existing, type, bats, generation, coverage }: { total: n
       <div className="chip r"><small>{total} painéis</small><b className="num">Cobre {num(coverage * 100)}%</b></div>
       <div className="status">
         <button className="pp" aria-label={playing ? 'Pausar animação' : 'Tocar animação'} onClick={() => { day.playing = !playing; setPlaying(!playing); }}>
-          {playing ? <CirclePause size={19} /> : <CirclePlay size={19} />}
+          {playing ? <Pause size={19} fill="currentColor" /> : <Play size={19} fill="currentColor" />}
         </button>
         <b className="num" id="clock" />
         <span id="st" />
       </div>
     </div>
   );
+}
+
+/** Três colunas só a partir de 1340 px, como no CSS */
+function useWide() {
+  const q = '(min-width: 1340px)';
+  const [wide, setWide] = useState(() => matchMedia(q).matches);
+  useEffect(() => {
+    const m = matchMedia(q), on = () => setWide(m.matches);
+    m.addEventListener('change', on);
+    return () => m.removeEventListener('change', on);
+  }, []);
+  return wide;
 }
 
 export default function Orcamento() {
@@ -203,6 +215,7 @@ export default function Orcamento() {
   const [tab, setTab] = useState<'neg' | 'fix'>('neg');
   const [preview, setPreview] = useState<'auto' | 'manual'>('manual');
   const [custom, setCustom] = useState({ final: 0, discount: 0 });
+  const wide = useWide();
 
   const input = draft.input;
   const r = useMemo(() => calculate(input, kits), [input, kits]);
@@ -395,17 +408,10 @@ export default function Orcamento() {
   const existing = input.existing ?? { modules: 0, w: 610 };
   const canToggle = r.discountShown > 0 || !!(pr.discountOff && pr.discount > 0);
 
-  return (
-    <div className="orc">
-      <TopBar />
-      <main className="orc-page">
-        <div className="orc-head">
-          <h1>{editing ? `Orçamento nº ${editing.number}` : 'Novo orçamento'}</h1>
-          {(editing || input.billValue > 0) && <button className="link-btn" disabled={busy} onClick={startAnother}>Começar outro</button>}
-        </div>
-
-        <div className="orc-grid">
-          <div className="col">
+  // Computador largo: cliente, tipo, conta e sistema à esquerda; casa e valor no meio; retorno à direita
+  const blocks = {
+    client: (
+      <>
             <section className="pnl">
               <button className="who" onClick={() => setSheet('client')}>
                 <i>{lead ? initials(lead.name) : <CirclePlus size={22} />}</i>
@@ -460,11 +466,12 @@ export default function Orcamento() {
               <input ref={fileIn} type="file" accept="image/*,application/pdf" hidden onChange={(e) => { onBill(e.target.files?.[0]); e.target.value = ''; }} />
               <input ref={photoIn} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { onBill(e.target.files?.[0]); e.target.value = ''; }} />
             </section>
-          </div>
-
-          <div className="col">
+      </>
+    ),
+    scene: (
             <Scene total={r.totalModules ?? r.modules} existing={existing.modules} type={input.systemType} bats={input.batteries} generation={(r.existingKwh ?? 0) + r.generationKwh} coverage={r.coverage} />
-
+    ),
+    system: (
             <section className="pnl">
               <h2 className="h">{amp ? 'Ampliação' : 'Sistema'}</h2>
               {amp && (
@@ -502,9 +509,8 @@ export default function Orcamento() {
                 </div>
               )}
             </section>
-          </div>
-
-          <div className="col">
+    ),
+    payoff: (
             <section className="pnl">
               <div className="payoff">
                 <small>{r.paybackMonths !== null && r.paybackMonths <= years * 12 ? 'O sistema se paga em' : 'Tempo para se pagar'}</small>
@@ -519,7 +525,8 @@ export default function Orcamento() {
                 <div><small>{projected >= r.totalPaid ? 'Sobra depois de pagar' : 'Ainda falta para se pagar'}</small><b className="num" style={{ color: projected >= r.totalPaid ? 'var(--green)' : 'var(--red)' }}>{brl(Math.abs(projected - r.totalPaid))}</b></div>
               </div>
             </section>
-
+    ),
+    value: (
             <section className="pnl">
               <div className="vhead">
                 <small>Valor do sistema</small>
@@ -572,6 +579,30 @@ export default function Orcamento() {
                 <div className="eco"><small>Economia</small><b className="num">{brl(r.monthlySavings)}</b></div>
               </div>
             </section>
+    ),
+  };
+
+  return (
+    <div className="orc">
+      <TopBar />
+      <main className="orc-page">
+        <div className="orc-head">
+          <h1>{editing ? `Orçamento nº ${editing.number}` : 'Novo orçamento'}</h1>
+          {(editing || input.billValue > 0) && <button className="link-btn" disabled={busy} onClick={startAnother}>Começar outro</button>}
+        </div>
+
+        <div className="orc-grid">
+          <div className="col">
+            {blocks.client}
+            {wide && blocks.system}
+          </div>
+          <div className="col">
+            {blocks.scene}
+            {wide ? blocks.value : blocks.system}
+          </div>
+          <div className="col">
+            {blocks.payoff}
+            {!wide && blocks.value}
           </div>
         </div>
       </main>

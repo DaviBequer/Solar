@@ -92,6 +92,7 @@ export default function Ajustes() {
   const [seller, setSeller] = useState('');
   const [sellerPhone, setSellerPhone] = useState('');
   const logoRef = useRef<HTMLInputElement>(null);
+  const contractLogoRef = useRef<HTMLInputElement>(null);
   const restoreRef = useRef<HTMLInputElement>(null);
   const contractRef = useRef<HTMLInputElement>(null);
   const [notifState, setNotifState] = useState(() => ('Notification' in window ? Notification.permission : 'unsupported'));
@@ -358,11 +359,25 @@ export default function Ajustes() {
             <Field label="UF" htmlFor="co-uf"><input id="co-uf" className="input" maxLength={2} value={companyData.uf} onChange={(e) => setCompanyData({ ...companyData, uf: e.target.value.toUpperCase() })} /></Field>
           </div>
           <Field label="Representante" htmlFor="co-rep"><input id="co-rep" className="input" value={companyData.representative} onChange={(e) => setCompanyData({ ...companyData, representative: e.target.value })} /></Field>
-          <button className="row" style={{ border: 0, background: 'transparent', padding: 0 }} onClick={() => logoRef.current?.click()}>
-            {settings.companyLogo ? <img src={settings.companyLogo} alt="" style={{ width: 56, height: 40, objectFit: 'contain' }} /> : null}
-            <span className="grow"><span className="t" style={{ fontSize: 14 }}>Logo no contrato e na proposta</span></span>
-            <span className="link-btn">{settings.companyLogo ? 'Trocar' : 'Escolher'}</span>
+          <button className="row" style={{ border: 0, background: 'transparent', padding: 0 }} onClick={() => contractLogoRef.current?.click()}>
+            {settings.contractLogo ? <img src={settings.contractLogo} alt="" style={{ width: 56, height: 40, objectFit: 'contain' }} /> : null}
+            <span className="grow"><span className="t" style={{ fontSize: 14 }}>Logo no contrato</span><span className="s">A da proposta fica em Na proposta</span></span>
+            <span className="link-btn">{settings.contractLogo ? 'Trocar' : 'Escolher'}</span>
           </button>
+          {settings.contractLogo && <button className="link-btn" style={{ alignSelf: 'flex-start' }} onClick={() => updateSettings({ contractLogo: null })}>Remover logo do contrato</button>}
+          <input
+            ref={contractLogoRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (!f) return;
+              await updateSettings({ contractLogo: await logoDataUrl(f) });
+              toast('Logo do contrato salva');
+            }}
+          />
         </div>
         <div className="sheet-actions">
           <button className="btn btn-secondary" onClick={() => setTextSheet(null)}>Cancelar</button>

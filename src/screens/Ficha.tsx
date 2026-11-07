@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Bell, ChevronLeft, ChevronRight, FilePen, FileSignature, FileText, LocateFixed, MapPin, MessageCircle, MoreHorizontal, Navigation, Phone, Plus, Share2, Sunrise, Trash2 } from 'lucide-react';
+import { Bell, ChevronLeft, CircleX, FilePen, FileSignature, FileText, LocateFixed, MapPin, MessageCircle, Minus, Navigation, Phone, Plus, Sunrise, Trash2 } from 'lucide-react';
 import { Field, Sheet, useConfirm, useToast } from '../ui/kit';
 import { nextTaskOf, useStore } from '../data/store';
 import { currentProposal, isSoldProposal, proposalsOf, saleCommission } from '../core/sale';
@@ -13,7 +13,7 @@ import type { Lead, LeadStatus, ProposalStatus } from '../core/types';
 import { goBack, navigate } from '../router';
 import { TaskSheet } from './task-sheet';
 
-type SheetName = 'more' | 'edit' | 'sale' | 'task' | 'proposal' | 'contract' | null;
+type SheetName = 'edit' | 'sale' | 'task' | 'proposal' | 'contract' | null;
 
 export default function Ficha({ id }: { id: string }) {
   const { leads, proposals, tasks, updateLead, deleteLead, saveTask, selectClient, openProposalInDraft, setProposalStatus, deleteProposal, closeSale, undoSale } = useStore();
@@ -103,29 +103,6 @@ export default function Ficha({ id }: { id: string }) {
     );
   }
 
-  async function share() {
-    if (!lead) return;
-    const lines = [`*${lead.name}*`];
-    if (lead.phone) lines.push(`Telefone: ${lead.phone}`);
-    if (lead.address) lines.push(`Endereço: ${lead.address}`);
-    if (maps) lines.push(`Mapa: ${maps}`);
-    if (props.length) {
-      lines.push('', '*Orçamentos*');
-      for (const p of props) lines.push(`nº ${p.number}: ${brl(p.result.finalPrice)}, ${p.result.modules} × ${p.result.panelW} W, ${PAY_LABEL[p.input.payment.method].toLowerCase()} (${PROPOSAL_STATUS_LABEL[p.status].toLowerCase()})`);
-    }
-    if (lead.records.length) {
-      lines.push('', '*Registros*');
-      for (const r of lead.records.slice(0, 5)) lines.push(`${dateShort(r.date)}: ${r.text}`);
-    }
-    const text = lines.join('\n');
-    if (navigator.share) {
-      try { await navigator.share({ text }); } catch { /* cancelado */ }
-    } else {
-      await navigator.clipboard.writeText(text);
-      toast('Ficha copiada');
-    }
-  }
-
   const statusOrder: LeadStatus[] = ['novo', 'negociando', 'vendido', 'perdido'];
   const sold = lead.status === 'vendido';
   // Vendido: o orçamento da venda; senão, o último que não foi recusado
@@ -140,10 +117,19 @@ export default function Ficha({ id }: { id: string }) {
     <>
       <div className="subbar">
         <button className="icon-btn" aria-label="Voltar para clientes" onClick={() => goBack('/clientes')}><ChevronLeft size={20} /></button>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="icon-btn" aria-label="Compartilhar ficha" onClick={share}><Share2 size={19} /></button>
-          <button className="icon-btn" aria-label="Mais opções" onClick={() => setSheet('more')}><MoreHorizontal size={19} /></button>
-        </div>
+        <button
+          className="icon-btn del"
+          aria-label="Excluir cliente"
+          onClick={async () => {
+            const ok = await confirm({ title: `Excluir ${lead.name}?`, message: 'Orçamentos, compromissos e anexos deste cliente também serão apagados.', confirm: 'Excluir', danger: true });
+            if (!ok) return;
+            await deleteLead(lead.id);
+            toast('Cliente excluído');
+            goBack('/clientes');
+          }}
+        >
+          <Minus size={20} />
+        </button>
       </div>
 
       <main className="page" style={{ paddingTop: 14 }}>
@@ -196,6 +182,19 @@ export default function Ficha({ id }: { id: string }) {
               {commission.paid ? 'Recebida' : 'A receber'}
             </button>
           </section>
+        )}
+        {sold && (
+          <button
+            className="btn btn-block mt-12 cancel-sale"
+            onClick={async () => {
+              if (await confirm({ title: 'O cliente cancelou?', message: 'A venda e a comissão são desfeitas, e o cliente vai para Perdido.', confirm: 'Cancelou', danger: true })) {
+                await undoSale(lead.id, 'perdido');
+                toast('Venda cancelada');
+              }
+            }}
+          >
+            <CircleX size={18} />Cliente cancelou
+          </button>
         )}
 
         <div className="quick mt-12">
@@ -295,27 +294,6 @@ export default function Ficha({ id }: { id: string }) {
         </div>
         </div>
       </main>
-
-      <Sheet open={sheet === 'more'} onClose={() => setSheet(null)} title="Opções">
-        <ul className="list">
-          <li><button className="row" onClick={() => setSheet('edit')}><span className="grow"><span className="t">Editar dados</span></span><ChevronRight size={18} className="chev" /></button></li>
-          <li>
-            <button
-              className="row"
-              onClick={async () => {
-                const ok = await confirm({ title: `Excluir ${lead.name}?`, message: 'Orçamentos, compromissos e anexos deste cliente também serão apagados.', confirm: 'Excluir', danger: true });
-                if (!ok) return;
-                setSheet(null);
-                await deleteLead(lead.id);
-                toast('Cliente excluído');
-                goBack('/clientes');
-              }}
-            >
-              <span className="grow"><span className="t danger-text">Excluir cliente</span></span>
-            </button>
-          </li>
-        </ul>
-      </Sheet>
 
       <EditSheet open={sheet === 'edit'} onClose={() => setSheet(null)} lead={lead} />
 

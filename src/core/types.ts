@@ -66,6 +66,8 @@ export interface CompanyData {
 export interface Settings extends CalcParams {
   companyName: string;
   companyLogo: string | null;
+  /** Logo da empresa contratada, só no contrato. Pode ser outra que a da proposta. */
+  contractLogo?: string | null;
   sellerName: string;
   sellerPhone: string;
   interestRate: number;

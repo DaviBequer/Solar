@@ -10,7 +10,7 @@ const logoBytes = (dataUrl: string | null) => (dataUrl?.startsWith('data:image/p
 
 async function modelParts(settings: Settings): Promise<DocxParts> {
   const b64 = settings.contractDocx ?? (await import('../data/contract-base')).default;
-  return placeLogo(await readDocx(base64ToBytes(b64)), logoBytes(settings.companyLogo));
+  return placeLogo(await readDocx(base64ToBytes(b64)), logoBytes(settings.contractLogo ?? null));
 }
 
 async function fontBase64(url: string): Promise<string> {
