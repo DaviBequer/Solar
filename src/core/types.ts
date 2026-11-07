@@ -16,6 +16,8 @@ export interface Kit {
   panel700: number;
   inverter: string;
   price: number;
+  /** Padrão de ligação que o kit atende, como na tabela: Monofásico, Mono/Trifásico, Bi/Trifásico, Trifásico */
+  phase?: string;
 }
 
 /** Parâmetros que entram no cálculo. Cada orçamento guarda a sua cópia. */

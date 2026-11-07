@@ -35,7 +35,7 @@ function normInverter(raw: string): string {
 }
 
 /**
- * Lê a tabela de kits no formato: GM, 585, 610, 700, Inversor, Valor.
+ * Lê a tabela de kits no formato: GM, 585, 610, 700, Inversor, Valor e, opcional, Fase.
  * Aceita vírgula ou ponto e vírgula como separador e ignora o cabeçalho.
  */
 export function parseKitsCsv(text: string): Kit[] {
@@ -58,15 +58,16 @@ export function parseKitsCsv(text: string): Kit[] {
       panel700: parseInt(cols[3], 10) || 0,
       inverter: normInverter(cols[4]),
       price,
+      ...(cols[6]?.trim() ? { phase: cols[6].trim() } : {}),
     });
   }
   return kits;
 }
 
 export function kitsToCsv(kits: Kit[]): string {
-  const head = 'GM;585;610;700;Inversor;Valor';
+  const head = 'GM;585;610;700;Inversor;Valor;Fase';
   const rows = kits.map((k) =>
-    [k.gm, k.panel585, k.panel610, k.panel700, k.inverter, k.price.toFixed(2).replace('.', ',')].join(';'),
+    [k.gm, k.panel585, k.panel610, k.panel700, k.inverter, k.price.toFixed(2).replace('.', ','), k.phase ?? ''].join(';'),
   );
   return [head, ...rows].join('\n');
 }

@@ -61,7 +61,7 @@ export default function Kits() {
       </div>
       <main className="page full">
         <p className="muted" style={{ fontSize: 13, marginTop: 10, lineHeight: 1.45 }}>
-          O orçamento escolhe o menor kit que cobre o consumo com a margem. Para importar, use uma planilha CSV com as colunas GM, 585, 610, 700, Inversor e Valor.
+          O orçamento escolhe o menor kit que cobre o consumo com a margem. Para importar, use uma planilha CSV com as colunas GM, 585, 610, 700, Inversor, Valor e Fase (opcional).
         </p>
 
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
@@ -86,7 +86,7 @@ export default function Kits() {
                 <button className="row" onClick={() => setEdit({ ...k })}>
                   <span className="grow">
                     <span className="t">{num(k.gm)} kWh por mês</span>
-                    <span className="s">{panels(k)}, inversor {k.inverter || '—'}</span>
+                    <span className="s">{panels(k)}, inversor {k.inverter || '—'}{k.phase ? `, ${k.phase.toLowerCase()}` : ''}</span>
                   </span>
                   <span className="v num" style={{ fontSize: 14, fontWeight: 600 }}>{brl(k.price)}</span>
                 </button>
@@ -146,7 +146,7 @@ export default function Kits() {
             <ul className="list mt-12">
               {imported.slice(0, 4).map((k) => (
                 <li key={k.id} className="row">
-                  <span className="grow"><span className="t">{num(k.gm)} kWh</span><span className="s">{panels(k)}, inversor {k.inverter}</span></span>
+                  <span className="grow"><span className="t">{num(k.gm)} kWh</span><span className="s">{panels(k)}, inversor {k.inverter}{k.phase ? `, ${k.phase.toLowerCase()}` : ''}</span></span>
                   <span className="v num">{brl(k.price)}</span>
                 </li>
               ))}
@@ -177,6 +177,7 @@ export default function Kits() {
                 <Field label="700 W" htmlFor="k-700"><NumberField id="k-700" value={edit.panel700} decimals={0} onChange={(n) => set({ panel700: Math.round(n) })} /></Field>
               </div>
               <Field label="Inversor (potência ou modelo)" htmlFor="k-inv"><input id="k-inv" className="input" value={edit.inverter} onChange={(e) => set({ inverter: e.target.value })} placeholder="Ex.: 6 ou SOFAR 6K" /></Field>
+              <Field label="Padrão de ligação (opcional)" htmlFor="k-phase"><input id="k-phase" className="input" value={edit.phase ?? ''} onChange={(e) => set({ phase: e.target.value || undefined })} placeholder="Ex.: Monofásico ou Bi/Trifásico" /></Field>
               <Field label="Preço do kit" htmlFor="k-price"><NumberField id="k-price" value={edit.price} prefix="R$" onChange={(n) => set({ price: n })} /></Field>
             </div>
             <div className="sheet-actions">

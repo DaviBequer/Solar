@@ -1,5 +1,10 @@
 # Versões
 
+## 3.0.4 — 6 de novembro de 2026
+
+- Tabela de kits com o padrão de ligação (coluna Fase, opcional). O orçamento avisa quando o padrão do cliente não atende o kit.
+- Novo cliente agora é um botão redondo só com ícone, no canto da tela.
+
 ## 3.0.3 — 6 de novembro de 2026
 
 - Contrato em PDF para cada cliente: no orçamento da Ficha, "Gerar contrato" preenche os dados do cliente e do sistema. O app pede CPF ou CNPJ, nascimento e CEP, e guarda na ficha.

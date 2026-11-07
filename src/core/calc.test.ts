@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { calculate, installment, inverterLabel } from './calc';
 import { DEFAULT_SETTINGS, newQuoteInput } from './defaults';
-import { parseKitsCsv, parseMoney } from './csv';
+import { kitsToCsv, parseKitsCsv, parseMoney } from './csv';
 import { stepModules, withSettings } from './quote';
 import { backupOverdue, monthsText, parseBR } from './format';
 import type { Kit, QuoteInput } from './types';
@@ -62,6 +62,25 @@ describe('dimensionamento e kit', () => {
     const monthly = [700, 800, 0, 0, 0, 0, 0, 0, 0, 0, 0, 900];
     const r = calculate(input({ monthly, billMode: 'kwh' }), kits);
     expect(r.consumptionKwh).toBe(800);
+  });
+});
+
+describe('padrão de ligação do kit', () => {
+  const onlyKit = (phase?: string): Kit[] => [{ id: 'x', gm: 2000, panel585: 0, panel610: 32, panel700: 0, inverter: 'SAJ', price: 39000, phase }];
+  const warns = (phase: string | undefined, grid: QuoteInput['grid']) => calculate(input({ grid }), onlyKit(phase)).warnings.some((w) => /padrão/.test(w));
+
+  it('avisa quando o padrão do cliente não atende o kit', () => {
+    expect(warns('Trifásico', 'mono')).toBe(true);
+    expect(warns('Trifásico', 'bi')).toBe(true);
+    expect(warns('Bi/Trifásico', 'mono')).toBe(true);
+  });
+
+  it('não avisa quando atende, nem em kit sem padrão informado', () => {
+    expect(warns('Trifásico', 'tri')).toBe(false);
+    expect(warns('Bi/Trifásico', 'bi')).toBe(false);
+    expect(warns('Mono/Trifásico', 'mono')).toBe(false);
+    expect(warns('Monofásico', 'tri')).toBe(false);
+    expect(warns(undefined, 'mono')).toBe(false);
   });
 });
 
@@ -226,6 +245,15 @@ describe('planilha de kits', () => {
     expect(k[0].gm).toBe(1040);
     expect(k[0].inverter).toBe('3,5');
     expect(k[0].price).toBe(26100);
+  });
+
+  it('lê e devolve a coluna Fase, que é opcional', () => {
+    const [k] = parseKitsCsv('GM;585;610;700;Inversor;Valor;Fase\n897;0;15;0;SAJ 5.000W;19.768,92;Monofásico\n');
+    expect(k.phase).toBe('Monofásico');
+    expect(k.inverter).toBe('SAJ 5.000W');
+    expect(k.price).toBe(19768.92);
+    expect(kitsToCsv([k]).split('\n')[1]).toBe('897;0;15;0;SAJ 5.000W;19768,92;Monofásico');
+    expect(parseKitsCsv('890,0,12,0,6,22900.50\n')[0].phase).toBeUndefined();
   });
 
   it('valores com milhar sem centavos', () => {

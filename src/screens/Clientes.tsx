@@ -72,7 +72,7 @@ export default function Clientes() {
   return (
     <>
       <TopBar />
-      <main className="page">
+      <main className="page" style={{ paddingBottom: 'calc(var(--tabbar-h) + var(--safe-b) + 88px)' }}>
         <div className="page-head">
           <div>
             <h1>Clientes</h1>
@@ -80,9 +80,6 @@ export default function Clientes() {
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="icon-btn" aria-label="Compartilhar lista" onClick={share}><Share2 size={19} /></button>
-            <button className="btn btn-primary" style={{ height: 44, padding: '0 16px 0 12px' }} onClick={() => setCreating(true)}>
-              <Plus size={18} /> Novo
-            </button>
           </div>
         </div>
 
@@ -148,6 +145,8 @@ export default function Clientes() {
           </div>
         )}
       </main>
+
+      <button className="fab icon" aria-label="Novo cliente" onClick={() => setCreating(true)}><Plus size={26} /></button>
 
       <ClientPicker
         createOnly

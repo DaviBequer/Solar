@@ -160,6 +160,7 @@ textarea.input { height: auto; min-height: 84px; padding: 12px 14px; resize: ver
 
 .fab { position: fixed; right: max(20px, calc(50% - 240px + 20px)); bottom: calc(var(--tabbar-h) + var(--safe-b) + 16px); height: 52px; padding: 0 20px 0 16px; border-radius: 26px; border: 0; background: var(--ink); color: #fff; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 10px 24px rgba(20, 33, 63, 0.28); z-index: 38; }
 .fab svg { color: var(--gold); }
+.fab.icon { width: 56px; height: 56px; padding: 0; border-radius: 50%; justify-content: center; }
 
 /* ---------- folhas (bottom sheet) ---------- */
 .backdrop { position: fixed; inset: 0; background: rgba(20, 33, 63, 0.45); z-index: 60; animation: fade 0.18s ease-out; }

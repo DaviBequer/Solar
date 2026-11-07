@@ -4,7 +4,7 @@ Resumo da conversa em que o Sonit foi reescrito (5 e 6 de novembro de 2026), par
 
 ## Estado atual
 
-- **v3.0.3 publicada** em https://davibequer.github.io/Solar/ (ramo `gh-pages`, publicado com `npm run publicar`).
+- **v3.0.4 publicada** em https://davibequer.github.io/Solar/ (ramo `gh-pages`, publicado com `npm run publicar`).
 - Reescrita completa a partir do app gerado no Google AI Studio. Nada do código antigo é usado; os dois primeiros commits do histórico (`4e49732` e `5d65523`) ainda contêm o código original.
 - Testes em `npm test`: cálculo, venda, proposta, links, navegação e backup de ponta a ponta.
 - O fluxo inteiro foi testado num navegador em tamanho de celular (importar kits, orçar, criar cliente, gerar PDF, agendar, fechar venda, painel). Esse teste ficou fora do repositório.
@@ -34,6 +34,15 @@ Resumo da conversa em que o Sonit foi reescrito (5 e 6 de novembro de 2026), par
 - O modelo fica fora do repositório, que é público: `modelo-contrato-sonit.txt`, na pasta acima do projeto. Importar em Ajustes em cada aparelho. **Nunca colocar esse arquivo nem dados de cliente no repositório.**
 - Formato do modelo: `#` título, `##` seção, `>` recuo, `|` tabela, `_` linha de assinatura, `{{campo}}` dado automático. Campos aceitos em `FIELDS`, em `src/core/contract.ts`.
 - Em aberto com o Davi: a tabela do modelo diz 15 anos no inversor e 30 nos módulos, e a cláusula 6.2 diz 12 para os dois. Falta decidir e ajustar o modelo. Vale revisão de advogado.
+
+### Tabela de kits de teste
+- `tabela-kits-startsun-2026-03.csv`, na pasta acima do projeto: 65 kits extraídos da tabela StartSun de março/abril de 2026. É de outra empresa e só para teste, então fica fora do repositório.
+- A parcela de 72× da tabela equivale a 2,1% ao mês sem IOF nem spread. Com os padrões do app, a parcela sai maior. Falta o Davi confirmar a regra.
+- Marcas de módulo da tabela (TSUN/DAH/ERA) não existem na lista do app; resolve com as marcas editáveis da v3.2.
+
+### Leitura da fatura da Celesc — em avaliação
+- PDF da fatura: dá para ler no aparelho, sem servidor, se tiver texto de verdade. Falta uma fatura real para confirmar o formato.
+- Foto: leitura local é pouco confiável em tabela pequena; IA de imagem precisaria de um servidor para guardar a chave, e o app não tem. Sempre mostrar os valores para conferir antes de usar.
 
 ### v3.1
 - Botão "Adicionar ao Google Agenda" nos compromissos (o aviso chega com o app fechado).

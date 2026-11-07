@@ -1,5 +1,5 @@
-import type { Kit, PanelW, QuoteInput, QuoteResult, Commission } from './types';
-import { GRID_MIN_KWH } from './defaults';
+import type { Grid, Kit, PanelW, QuoteInput, QuoteResult, Commission } from './types';
+import { GRID_LABEL, GRID_MIN_KWH } from './defaults';
 
 const PANELS: PanelW[] = [585, 610, 700];
 
@@ -59,6 +59,14 @@ export function installment(financed: number, ratePct: number, n: number): numbe
   if (r === 0) return financed / n;
   const f = Math.pow(1 + r, n);
   return (financed * r * f) / (f - 1);
+}
+
+/** O padrão do cliente atende o kit? Kit monofásico liga em qualquer padrão; kit sem padrão informado não é conferido. */
+function fitsGrid(kit: Kit, grid: Grid): boolean {
+  const phase = (kit.phase ?? '').toLowerCase();
+  if (!phase || phase.includes('mono')) return true;
+  if (phase.includes('bi')) return grid !== 'mono';
+  return grid === 'tri';
 }
 
 interface KitPick {
@@ -149,6 +157,7 @@ export function calculate(input: QuoteInput, kits: Kit[]): QuoteResult {
         generationKwh = kit.gm;
         kitPrice = kit.price;
         inverterText = inverterLabel(kit.inverter, input.inverterBrand);
+        if (!fitsGrid(kit, input.grid)) warnings.push(`Este kit é para padrão ${kit.phase!.toLowerCase()}, e a rede está como ${GRID_LABEL[input.grid].toLowerCase()}. Confira a rede ou o padrão de entrada.`);
       } else {
         modules = input.manualModules ?? Math.max(1, Math.ceil(targetKwh / ((panelW / 1000) * p.productivity)));
         generationKwh = Math.round(modules * (panelW / 1000) * p.productivity);
