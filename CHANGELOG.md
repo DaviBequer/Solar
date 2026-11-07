@@ -1,5 +1,11 @@
 # Versões
 
+## 3.1.8 — 7 de novembro de 2026
+
+- Proposta nova em duas páginas, a versão 2 escolhida. Página 1: faixa do cliente com CPF, telefone e endereço da ficha, foto da casa, a conta de luz no período (10, 12 ou 15 anos, conforme o retorno) e o fechamento. Página 2: o projeto com o desenho dos módulos, a economia em 1, 3, 5 anos e no período, as formas de pagamento, Depois do sim e garantias.
+- Ao baixar ou enviar, o app pergunta quais formas de pagamento entram (à vista, entrada, 36× a 96×) e qual é a principal.
+- Mensagem do rodapé editável em Ajustes, Na proposta. Sai pequena nas duas páginas.
+
 ## 3.1.7 — 7 de novembro de 2026
 
 - No computador, Ajustes em abas no topo: Na proposta, Contrato, Cálculo, Preços e metas, Lembretes e Seus dados, usando a largura da tela.

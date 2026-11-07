@@ -1,163 +1,170 @@
 import { forwardRef } from 'react';
+import '@fontsource/fraunces/latin-700.css';
 import type { Lead, Proposal, Settings } from '../core/types';
-import { proposalContent } from '../core/proposal';
+import { paybackOf, proposalContent, proposalStory, type PlanChoice } from '../core/proposal';
 import { GRID_LABEL, ROOF_LABEL, SYSTEM_LABEL } from '../core/defaults';
-import { brl, dateLong, monthsText, MONTHS, num } from '../core/format';
+import { brl, monthsText, num } from '../core/format';
+import photo from '../assets/casa.webp';
+import './proposal.css';
 
 interface Props {
   proposal: Proposal;
   lead: Lead | null;
   settings: Settings;
+  /** Formas escolhidas ao gerar, na ordem em que aparecem */
+  plans: PlanChoice[];
+  main: string;
 }
 
-function Gauge({ consumption, generation }: { consumption: number; generation: number }) {
-  const max = Math.max(consumption, generation, 1);
-  const fill = generation / max;
-  const tick = consumption / max;
-  const pt = (f: number, r: number) => [150 - r * Math.cos(Math.PI * f), 150 - r * Math.sin(Math.PI * f)];
-  const [ex, ey] = pt(fill, 120);
-  const [ix, iy] = pt(tick, 104);
-  const [ox, oy] = pt(tick, 136);
+const Ico = ({ d }: { d: string }) => (
+  <span className="pd-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#E8C885" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg></span>
+);
+const SHIELD = 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z';
+const WAVE = 'M4 12h3l2-5 4 10 2-5h5';
+const CHECK = 'M5 12l5 5 9-10';
+
+/** Desenho dos módulos em fileiras, só para dar ideia do tamanho do telhado */
+function Modules({ n }: { n: number }) {
+  const count = Math.max(1, Math.min(n, 60));
+  const cols = Math.min(count, Math.max(3, Math.ceil(Math.sqrt(count * 1.7))));
+  const rows = Math.ceil(count / cols);
+  const w = 40, h = 26, gap = 4, W = cols * (w + gap) + 8, H = rows * (h + gap) + 8;
   return (
-    <svg width="350" height="172" viewBox="0 0 300 160" aria-hidden="true">
-      <path d="M 30 150 A 120 120 0 0 1 270 150" fill="none" stroke="#33466F" strokeWidth="14" strokeLinecap="round" />
-      {fill > 0.005 && <path d={`M 30 150 A 120 120 0 0 1 ${ex.toFixed(1)} ${ey.toFixed(1)}`} fill="none" stroke="#C6A15B" strokeWidth="14" strokeLinecap="round" />}
-      {consumption > 0 && <line x1={ix} y1={iy} x2={ox} y2={oy} stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" />}
-      {fill > 0.005 && <circle cx={ex} cy={ey} r="11" fill="#C6A15B" stroke="#14213F" strokeWidth="4" />}
+    <svg viewBox={`0 0 ${W} ${H}`} aria-label={`${n} módulos`}>
+      {Array.from({ length: count }, (_, i) => {
+        const x = 6 + (i % cols) * (w + gap), y = 6 + Math.floor(i / cols) * (h + gap);
+        return (
+          <g key={i}>
+            <rect x={x} y={y} width={w} height={h} rx="2" fill="#2F4A86" stroke="#E8C885" strokeWidth="1.2" />
+            <path d={`M${x + w / 3} ${y}v${h}M${x + (2 * w) / 3} ${y}v${h}M${x} ${y + h / 2}h${w}`} stroke="#8FA3CC" strokeWidth=".5" opacity=".6" />
+          </g>
+        );
+      })}
     </svg>
   );
 }
 
-const row = { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '9px 0', borderBottom: '1px solid #EEF0F4', fontSize: 16, gap: 16 } as const;
+const Top = ({ settings, children }: { settings: Settings; children: React.ReactNode }) => (
+  <div className="pd-top">
+    <div className="pd-brand">
+      {settings.companyLogo ? <img src={settings.companyLogo} alt="" /> : null}
+      {settings.companyName && <span>{settings.companyName}</span>}
+    </div>
+    <div className="pd-ref">{children}</div>
+  </div>
+);
 
-export const ProposalDoc = forwardRef<HTMLDivElement, Props>(function ProposalDoc({ proposal, lead, settings }, ref) {
+export const ProposalDoc = forwardRef<HTMLDivElement, Props>(function ProposalDoc({ proposal, lead, settings, plans, main }, ref) {
   const r = proposal.result;
   const input = proposal.input;
-  const { issued, valid, options, rate, installmentBelowBill, paybackFrac, paidAt, years, fioBNote } = proposalContent(proposal, settings);
+  const { issued, valid } = proposalContent(proposal, settings);
+  const mainPlan = plans.find((p) => p.key === main) ?? plans[0];
+  const s = proposalStory(proposal, mainPlan);
+  const doc = lead?.document?.replace(/\D/g, '') ?? '';
+  const number = `Proposta nº ${String(proposal.number).padStart(4, '0')}`;
+  const validText = valid.toLocaleDateString('pt-BR');
+  const contact = [settings.sellerName, settings.sellerPhone && `WhatsApp ${settings.sellerPhone}`].filter(Boolean).join(' · ');
+  const footer = settings.proposalFooter?.trim();
+  const pay = monthsText(s.payback);
 
   return (
-    <div className="doc" ref={ref}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 44 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          {settings.companyLogo && <img src={settings.companyLogo} alt="" style={{ height: 48, maxWidth: 160, objectFit: 'contain' }} />}
-          {settings.companyName && <span style={{ fontSize: 18, fontWeight: 600 }}>{settings.companyName}</span>}
-        </div>
-        <div style={{ textAlign: 'right', fontSize: 14, lineHeight: 1.45, color: '#5D6475' }}>
-          <div style={{ fontWeight: 600, color: '#14213F' }}>Proposta nº {String(proposal.number).padStart(4, '0')}</div>
-          <div>{dateLong(issued)}</div>
-        </div>
-      </header>
-
-      <section style={{ marginTop: 28, background: '#14213F', color: '#fff', borderRadius: 24, padding: '30px 34px', display: 'flex', alignItems: 'center', gap: 24 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 16, color: '#B9C3DA' }}>Proposta de energia solar para</p>
-          <h1 style={{ marginTop: 4, fontSize: 38, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.1 }}>{lead?.name ?? 'Cliente'}</h1>
-          <p style={{ marginTop: 16, fontSize: 18, lineHeight: 1.45, color: '#D5DBE8' }}>
-            Sua conta de {brl(r.currentBill)} cai para cerca de {brl(r.newBill)} por mês.
-          </p>
-        </div>
-        <div style={{ position: 'relative', width: 250, height: 150, flexShrink: 0 }}>
-          <div style={{ position: 'absolute', left: 0, top: 0, width: 250, height: 140 }}>
-            <div style={{ transform: 'scale(0.7143)', transformOrigin: 'top left', width: 350 }}>
-              <Gauge consumption={r.consumptionKwh} generation={r.generationKwh} />
+    <div ref={ref} className="pdoc">
+      {/* página 1: cliente, casa e a conta no período */}
+      <div className="pd-page">
+        <Top settings={settings}><b>{number}</b>{issued.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}</Top>
+        <div className="pd-band">
+          <div><span className="pd-lbl">Proposta de energia solar para</span><h1>{lead?.name ?? 'Cliente'}</h1></div>
+          {(doc || lead?.phone || lead?.address) && (
+            <div className="pd-cli">
+              {doc && <div><span className="pd-lbl">{doc.length === 14 ? 'CNPJ' : 'CPF'}</span><b>{lead!.document}</b></div>}
+              {lead?.phone && <div><span className="pd-lbl">Telefone</span><b>{lead.phone}</b></div>}
+              {lead?.address && <div className="wide"><span className="pd-lbl">Endereço da instalação</span><b>{lead.address}</b></div>}
             </div>
-          </div>
-          <div style={{ position: 'absolute', left: 0, right: 0, top: 58, textAlign: 'center' }}>
-            <div style={{ fontSize: 32, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1 }}>
-              {num(r.generationKwh)} <span style={{ fontSize: 15, fontWeight: 500 }}>kWh/mês</span>
-            </div>
-            <div style={{ marginTop: 6, fontSize: 14, color: '#C6A15B' }}>cobre {num(r.coverage * 100)}% do consumo</div>
-          </div>
-        </div>
-      </section>
-
-      <section style={{ marginTop: 26, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-        <div style={{ paddingRight: 20, borderRight: '1px solid #E3E5EB' }}>
-          <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em' }}>{brl(r.monthlySavings)}</div>
-          <div style={{ fontSize: 16, color: '#5D6475' }}>de economia por mês</div>
-        </div>
-        <div style={{ padding: '0 20px', borderRight: '1px solid #E3E5EB' }}>
-          <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em' }}>{brl(r.annualSavings)}</div>
-          <div style={{ fontSize: 16, color: '#5D6475' }}>de economia por ano</div>
-        </div>
-        <div style={{ paddingLeft: 20 }}>
-          <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em' }}>{monthsText(r.paybackMonths)}</div>
-          <div style={{ fontSize: 16, color: '#5D6475' }}>para o sistema se pagar</div>
-        </div>
-      </section>
-
-      <div style={{ marginTop: 30, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 40 }}>
-        <section>
-          <h2 style={{ marginBottom: 6, fontSize: 20, fontWeight: 600 }}>Seu sistema</h2>
-          {input.systemType !== 'ongrid' && <div style={row}><span style={{ color: '#5D6475' }}>Tipo</span><span style={{ fontWeight: 500 }}>{SYSTEM_LABEL[input.systemType]}</span></div>}
-          <div style={row}><span style={{ color: '#5D6475' }}>Módulos</span><span style={{ fontWeight: 500 }}>{r.modules} × {input.moduleBrand} {r.panelW} W</span></div>
-          <div style={row}><span style={{ color: '#5D6475' }}>Inversor</span><span style={{ fontWeight: 500 }}>{r.inverterLabel || '—'}</span></div>
-          {input.systemType === 'bateria' && <div style={row}><span style={{ color: '#5D6475' }}>Baterias</span><span style={{ fontWeight: 500 }}>{input.batteries}</span></div>}
-          <div style={row}><span style={{ color: '#5D6475' }}>Potência</span><span style={{ fontWeight: 500 }}>{num(r.kWp, 2)} kWp</span></div>
-          <div style={row}><span style={{ color: '#5D6475' }}>Instalação</span><span style={{ fontWeight: 500 }}>{ROOF_LABEL[input.roof]}</span></div>
-          <div style={{ ...row, borderBottom: 0 }}><span style={{ color: '#5D6475' }}>Rede</span><span style={{ fontWeight: 500 }}>{GRID_LABEL[input.grid]}</span></div>
-        </section>
-        <section>
-          <h2 style={{ marginBottom: 6, fontSize: 20, fontWeight: 600 }}>Investimento</h2>
-          {r.discountShown > 0 && (
-            <div style={row}><span style={{ color: '#5D6475' }}>De</span><span style={{ textDecoration: 'line-through', color: '#5D6475' }}>{brl(r.tablePrice)}</span></div>
           )}
-          {options.map((o) =>
-            o.on ? (
-              <div key={o.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, padding: '10px 12px', margin: '6px -12px 0', background: '#F1E6CF', borderRadius: 12 }}>
-                <span style={{ fontSize: 16, fontWeight: 500 }}>{o.label}</span>
-                <span style={{ fontSize: 20, fontWeight: 600 }}>{o.value}</span>
-              </div>
-            ) : (
-              <div key={o.key} style={row}>
-                <span style={{ color: '#5D6475' }}>{o.label}</span>
-                <span style={{ fontSize: 18, fontWeight: 600 }}>{o.value}</span>
-              </div>
-            ),
-          )}
-          {options.length > 1 && (
-            <p style={{ marginTop: 8, fontSize: 14, color: '#5D6475', lineHeight: 1.45 }}>
-              Taxa de {num(rate, 2)}% ao mês, sujeita à aprovação de crédito.
-              {installmentBelowBill ? ' A parcela é menor que a conta de hoje.' : ''}
-            </p>
-          )}
-        </section>
+        </div>
+        <div className="pd-hero" style={{ backgroundImage: `url(${photo})` }}>
+          <p>Sua conta de <em>{brl(r.currentBill)}</em> vira apenas taxas e iluminação pública.</p>
+        </div>
+        <div>
+          <p className="pd-news">Nos próximos {s.years} anos, sua casa vai pagar <em>{brl(s.billTotal)}</em> de luz.</p>
+          <p className="pd-deck">{mainPlan.key === 'vista' ? `O sistema custa uma vez só, se paga em ${pay} e o resto vira lucro.` : `O sistema se paga em ${pay} e o resto vira lucro.`}</p>
+        </div>
+        <div>
+          <div className="pd-hb"><span>Conta de luz sem solar</span><span className="t"><i style={{ width: '100%', background: '#A8352B' }} /></span><b>{brl(s.billTotal)}</b></div>
+          <div className="pd-hb"><span>{mainPlan.key === 'vista' ? 'Sistema, pago uma vez' : `Sistema, ${mainPlan.label.toLowerCase()}`}</span><span className="t"><i style={{ width: `${Math.min(100, (s.systemTotal / s.billTotal) * 100)}%`, background: '#1B2A49' }} /></span><b>{brl(s.systemTotal)}</b></div>
+          {s.keep > 0 && <div className="pd-hb win"><span>Fica com você</span><span className="t"><i style={{ width: `${Math.min(100, (s.keep / s.billTotal) * 100)}%`, background: '#0A7654' }} /></span><b>{brl(s.keep)}</b></div>}
+        </div>
+        <div className="pd-cta">
+          <div><b>Cada mês sem o sistema custa {brl(r.monthlySavings)}</b>{contact && <div className="s">{contact}</div>}</div>
+          <div className="d">Válida até<b>{validText}</b></div>
+        </div>
+        {footer && <p className="pd-edge">{footer}</p>}
       </div>
 
-      {paybackFrac !== null && paybackFrac < 0.95 && paidAt && (
-        <section style={{ marginTop: 30 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <h2 style={{ fontSize: 20, fontWeight: 600 }}>Os próximos 25 anos</h2>
-            <span style={{ fontSize: 16 }}>{brl(r.savings25y)} de economia, sem contar reajustes</span>
-          </div>
-          <div style={{ position: 'relative', marginTop: 34 }}>
-            <span style={{ position: 'absolute', left: `${paybackFrac * 100}%`, bottom: 22, transform: `translateX(-${Math.min(90, paybackFrac * 100 + 10)}%)`, fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}>
-              {MONTHS[paidAt.getMonth()].replace(/^./, (c) => c.toUpperCase())} de {paidAt.getFullYear()}: sistema pago
-            </span>
-            <div style={{ height: 14, borderRadius: 7, overflow: 'hidden', display: 'flex' }}>
-              <div style={{ width: `${paybackFrac * 100}%`, background: '#14213F' }} />
-              <div style={{ flex: 1, background: '#C6A15B' }} />
+      {/* página 2: projeto, economia, pagamento e fechamento */}
+      <div className="pd-page">
+        <Top settings={settings}><b>{lead?.name ?? 'Cliente'}</b>{number}</Top>
+        <div>
+          <p className="pd-h2">Seu projeto</p>
+          <div className="pd-proj">
+            <div className="roof"><Modules n={r.modules} /><b>{r.modules} × {num(r.panelW)} W</b><span>{num(r.kWp, 2)} kWp no seu telhado</span></div>
+            <div>
+              <div className="pd-kv"><span>Tipo do sistema</span><b>{SYSTEM_LABEL[input.systemType]}{input.systemType === 'ongrid' ? ', ligado à rede' : ''}</b></div>
+              <div className="pd-kv"><span>Módulos</span><b>{input.moduleBrand}, {num(r.panelW)} W</b></div>
+              <div className="pd-kv"><span>Quantidade</span><b>{r.modules} módulos</b></div>
+              <div className="pd-kv"><span>Potência total</span><b>{num(r.kWp, 2)} kWp</b></div>
+              <div className="pd-kv"><span>Inversor</span><b>{r.inverterLabel || '—'}</b></div>
+              {input.systemType === 'bateria' && <div className="pd-kv"><span>Baterias</span><b>{input.batteries}</b></div>}
+              <div className="pd-kv"><span>Telhado e rede</span><b>{ROOF_LABEL[input.roof]}, {GRID_LABEL[input.grid].toLowerCase()}</b></div>
+              <div className="pd-kv"><span>Geração estimada</span><b className="g">{num(r.generationKwh)} kWh por mês</b></div>
             </div>
-            <span style={{ position: 'absolute', left: `${paybackFrac * 100}%`, top: -8, width: 2, height: 30, background: '#14213F' }} />
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 14, color: '#5D6475' }}>
-            {years.map((y) => <span key={y}>{y}</span>)}
-          </div>
-        </section>
-      )}
-
-      <footer style={{ marginTop: 'auto', paddingTop: 18, borderTop: '2px solid #14213F', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 24 }}>
-        <div style={{ fontSize: 16, lineHeight: 1.45 }}>
-          {settings.sellerName && <div style={{ fontWeight: 600 }}>{settings.sellerName}{settings.companyName ? `, ${settings.companyName}` : ''}</div>}
-          {settings.sellerPhone && <div style={{ color: '#5D6475' }}>{settings.sellerPhone}</div>}
-          <div style={{ marginTop: 4, fontWeight: 600, color: '#7A5D24' }}>Válida até {dateLong(valid)}</div>
         </div>
-        <p style={{ maxWidth: 320, fontSize: 13, lineHeight: 1.45, color: '#5D6475', textAlign: 'right' }}>
-          Valores estimados com tarifa de R$ {num(input.params.tariff, 2)} por kWh.
-          {fioBNote && ` ${fioBNote}`}
-          {' '}A geração real varia com clima, sombreamento e orientação do telhado.
-        </p>
-      </footer>
+        <div className="pd-marks">
+          {s.marks.map((m, i) => <div key={m.years} className={i === s.marks.length - 1 ? 'hi' : ''}><b>{brl(m.value)}</b><span>de economia em {m.years === 1 ? '1 ano' : `${m.years} anos`}</span></div>)}
+        </div>
+        <div>
+          <p className="pd-h2">{plans.length > 1 ? 'Formas de pagamento' : 'Forma de pagamento'}</p>
+          <div className="pd-plans" style={{ gridTemplateColumns: `repeat(${Math.max(1, plans.length)}, minmax(0, 1fr))` }}>
+            {plans.map((p) => {
+              const below = p.monthly > 0 ? r.currentBill - p.monthly : 0;
+              return (
+                <div key={p.key} className={`pd-plan${p.key === mainPlan.key ? ' sel' : ''}`}>
+                  <h3>{p.label}</h3>
+                  {p.key === 'vista' ? <div className="v">{brl(p.total)}</div> : <div className="v">{brl(p.monthly)} <small>por mês</small></div>}
+                  <ul>
+                    {p.key === 'vista' && r.discountShown > 0 && <li><s>{brl(r.tablePrice)}</s>, desconto de {brl(r.discountShown)}</li>}
+                    {p.key === 'vista' && <li>Se paga em {monthsText(paybackOf(p.total, r.monthlySavings))}</li>}
+                    {p.down > 0 && <li>Entrada de {brl(p.down)}</li>}
+                    {p.monthly > 0 && <li>Sujeito à aprovação de crédito</li>}
+                  </ul>
+                  {p.key === 'vista' ? <div className="eco">Economia por mês: <b>{brl(r.monthlySavings)}</b></div> : below > 0 ? <div className="eco">Parcela <b>{brl(below)}</b> menor que a conta</div> : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div>
+          <p className="pd-h2" style={{ fontSize: 16 }}>Depois do sim</p>
+          <div className="pd-steps">
+            <div><i>1</i><b>Assinatura</b><span>contrato e pagamento</span></div>
+            <div><i>2</i><b>Projeto</b><span>feito pela nossa equipe</span></div>
+            <div><i>3</i><b>Celesc</b><span>a gente cuida da aprovação</span></div>
+            <div><i>4</i><b>Instalação</b><span>no seu telhado</span></div>
+            <div><i>5</i><b>Conta baixa</b><span>a economia começa</span></div>
+          </div>
+        </div>
+        <div className="pd-guar">
+          <div><Ico d={SHIELD} /><p><b>30 anos</b><span>de performance dos módulos</span></p></div>
+          <div><Ico d={WAVE} /><p><b>15 anos</b><span>de garantia do inversor</span></p></div>
+          <div><Ico d={CHECK} /><p><b>Celesc</b><span>homologação inclusa</span></p></div>
+        </div>
+        <div className="pd-cta">
+          <div><b>Quer garantir este valor?</b>{contact && <div className="s">{contact}</div>}</div>
+          <div className="d">Válida até<b>{validText}</b></div>
+        </div>
+        {footer && <p className="pd-edge">{footer}</p>}
+      </div>
     </div>
   );
 });

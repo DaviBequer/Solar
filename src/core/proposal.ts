@@ -1,4 +1,4 @@
-import { calculate } from './calc';
+import { calculate, installmentFor } from './calc';
 import { brl, num } from './format';
 import { issueDate } from './sale';
 import type { Proposal, Settings } from './types';
@@ -40,5 +40,66 @@ export function proposalContent(proposal: Proposal, settings: Pick<Settings, 'pr
     paidAt: r.paybackMonths !== null ? new Date(issued.getFullYear(), issued.getMonth() + Math.round(r.paybackMonths), 1) : null,
     years: Array.from({ length: 6 }, (_, i) => issued.getFullYear() + i * 5),
     fioBNote: fioB > 0 ? `A conta nova inclui ${brl(fioB)} por mês de Fio B (Lei 14.300): ${num(input.params.fioBPct)}% de R$ ${num(input.params.fioB, 3)} por kWh compensado.` : null,
+  };
+}
+
+/** Período da comparação da conta: curto quando o sistema se paga rápido, para não exagerar. */
+export function compareYears(paybackMonths: number | null): number {
+  if (paybackMonths === null || paybackMonths <= 36) return 10;
+  return paybackMonths <= 60 ? 12 : 15;
+}
+
+export interface PlanChoice {
+  key: string;
+  label: string;
+  /** Parcela por mês; 0 no à vista */
+  monthly: number;
+  down: number;
+  months: number;
+  total: number;
+}
+
+/** Formas de pagamento que dá para pôr no PDF: à vista, a entrada do orçamento (se houver) e cada prazo de financiamento. */
+export function planChoices(proposal: Proposal, terms: number[]): PlanChoice[] {
+  const { input, result: r } = proposal;
+  const price = r.finalPrice;
+  const out: PlanChoice[] = [{ key: 'vista', label: 'À vista', monthly: 0, down: 0, months: 0, total: price }];
+  const down = Math.min(Math.max(0, input.payment.downPayment), price);
+  if (down > 0) {
+    const n = input.payment.installments || 60;
+    const m = installmentFor({ ...input, payment: { ...input.payment, method: 'entrada' } }, price, n);
+    out.push({ key: 'entrada', label: `Entrada + ${n}×`, monthly: m, down, months: n, total: down + m * n });
+  }
+  for (const n of terms) {
+    const m = installmentFor({ ...input, payment: { ...input.payment, method: 'financiado' } }, price, n);
+    if (m > 0) out.push({ key: `fin${n}`, label: `Financiado ${n}×`, monthly: m, down: 0, months: n, total: m * n });
+  }
+  return out;
+}
+
+/** O que vem marcado ao gerar: à vista e a forma do próprio orçamento, que fica como principal. */
+export function defaultPlans(proposal: Proposal): { keys: string[]; main: string } {
+  const p = proposal.input.payment;
+  const own = p.method === 'vista' ? 'vista' : p.method === 'entrada' && p.downPayment > 0 ? 'entrada' : `fin${p.installments || 72}`;
+  return { keys: own === 'vista' ? ['vista'] : ['vista', own], main: own };
+}
+
+/** Meses para a economia pagar um total; sem economia, não se paga */
+export const paybackOf = (total: number, monthlySavings: number) => (monthlySavings > 0 ? total / monthlySavings : null);
+
+/** Números da página 1: a conta no período, o sistema e o que sobra; e os marcos de economia. */
+export function proposalStory(proposal: Proposal, main: PlanChoice) {
+  const r = proposal.result;
+  const payback = paybackOf(main.total, r.monthlySavings);
+  const years = compareYears(payback);
+  const billTotal = r.currentBill * 12 * years;
+  const savingsTotal = r.monthlySavings * 12 * years;
+  return {
+    years,
+    payback,
+    billTotal,
+    systemTotal: main.total,
+    keep: savingsTotal - main.total,
+    marks: [1, 3, 5, years].map((y) => ({ years: y, value: r.monthlySavings * 12 * y })),
   };
 }

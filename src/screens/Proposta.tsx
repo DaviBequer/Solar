@@ -1,34 +1,39 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronLeft, Download, Pencil, Send } from 'lucide-react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, Download, Pencil, Send, Star } from 'lucide-react';
 import { useStore } from '../data/store';
-import { useToast } from '../ui/kit';
+import { Sheet, useToast } from '../ui/kit';
+import { defaultPlans, planChoices } from '../core/proposal';
+import { brl } from '../core/format';
 import { goBack, navigate } from '../router';
 import { whatsappUrl } from '../core/links';
 import { ProposalDoc } from './ProposalDoc';
 import { deliverFile } from '../ui/deliver';
 
+/** Prazos de financiamento que dá para pôr no PDF */
+const TERMS = [36, 48, 60, 72, 84, 96];
+const MAX_PLANS = 4;
+
+/** Uma folha A4 por página da proposta, cada uma desenhada à parte. */
 async function makePdf(source: HTMLElement): Promise<Blob> {
   const { default: html2pdf } = await import('html2pdf.js');
   const holder = document.createElement('div');
   holder.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;z-index:-1;';
   const clone = source.cloneNode(true) as HTMLElement;
-  clone.style.boxShadow = 'none';
-  clone.style.height = '1120px';
-  clone.style.minHeight = '1120px';
-  clone.style.overflow = 'hidden';
   holder.appendChild(clone);
   document.body.appendChild(holder);
   try {
     await document.fonts?.ready;
-    return await html2pdf()
-      .set({
-        margin: 0,
-        image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 794 },
-        jsPDF: { unit: 'px', format: [794, 1123], orientation: 'portrait', hotfixes: ['px_scaling'] },
-      })
-      .from(clone)
-      .outputPdf('blob');
+    const pages = [...clone.querySelectorAll<HTMLElement>('.pd-page')];
+    pages.forEach((p) => (p.style.boxShadow = 'none'));
+    const opt = {
+      margin: 0,
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 794 },
+      jsPDF: { unit: 'px', format: [794, 1123], orientation: 'portrait', hotfixes: ['px_scaling'] },
+    };
+    let job = html2pdf().set(opt).from(pages[0]).toPdf();
+    for (const p of pages.slice(1)) job = job.get('pdf').then((pdf: { addPage: () => void }) => pdf.addPage()).from(p).toContainer().toCanvas().toPdf();
+    return await job.outputPdf('blob');
   } finally {
     document.body.removeChild(holder);
   }
@@ -43,6 +48,12 @@ export default function Proposta({ id }: { id: string }) {
   const docRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.45);
   const [busy, setBusy] = useState<null | 'baixar' | 'enviar'>(null);
+  // Formas de pagamento no PDF: perguntadas ao baixar ou enviar
+  const [ask, setAsk] = useState<null | 'baixar' | 'enviar'>(null);
+  const [picks, setPicks] = useState<{ keys: string[]; main: string } | null>(null);
+  const choices = useMemo(() => (proposal ? planChoices(proposal, TERMS) : []), [proposal]);
+  const pick = picks ?? (proposal ? defaultPlans(proposal) : { keys: ['vista'], main: 'vista' });
+  const plans = choices.filter((c) => pick.keys.includes(c.key));
 
   useLayoutEffect(() => {
     const el = stageRef.current;
@@ -136,23 +147,53 @@ export default function Proposta({ id }: { id: string }) {
           </div>
         )}
         <div className="doc-stage" ref={stageRef}>
-          <div style={{ height: 1123 * scale, overflow: 'hidden' }}>
+          <div style={{ height: (1123 * 2 + 24) * scale, overflow: 'hidden' }}>
             <div className="doc-scale" style={{ transform: `scale(${scale})`, width: 794 }}>
-              <ProposalDoc ref={docRef} proposal={proposal} lead={lead} settings={settings} />
+              <ProposalDoc ref={docRef} proposal={proposal} lead={lead} settings={settings} plans={plans.length ? plans : choices.slice(0, 1)} main={pick.main} />
             </div>
           </div>
         </div>
       </main>
       <div className="doc-actions no-print">
-        <button className="btn btn-secondary" onClick={download} disabled={!!busy}>
+        <button className="btn btn-secondary" onClick={() => setAsk('baixar')} disabled={!!busy}>
           <Download size={18} />
           {busy === 'baixar' ? 'Gerando…' : 'Baixar PDF'}
         </button>
-        <button className="btn btn-primary" onClick={send} disabled={!!busy}>
+        <button className="btn btn-primary" onClick={() => setAsk('enviar')} disabled={!!busy}>
           <Send size={18} />
           {busy === 'enviar' ? 'Gerando…' : 'Enviar'}
         </button>
       </div>
+
+      <Sheet open={!!ask} onClose={() => setAsk(null)} title="Formas de pagamento no PDF">
+        <p className="muted" style={{ fontSize: 13, marginBottom: 10, lineHeight: 1.45 }}>Marque até {MAX_PLANS} que o cliente quer ver. A estrela marca a principal, que sai em azul e entra na conta da primeira página.</p>
+        <ul className="list" aria-label="Formas de pagamento">
+          {choices.map((c) => {
+            const on = pick.keys.includes(c.key), main = pick.main === c.key;
+            const toggle = () => {
+              const keys = on ? pick.keys.filter((k) => k !== c.key) : [...pick.keys, c.key];
+              if (!keys.length) return;
+              if (!on && keys.length > MAX_PLANS) { toast(`No máximo ${MAX_PLANS} formas`); return; }
+              setPicks({ keys, main: keys.includes(pick.main) ? pick.main : keys[0] });
+            };
+            return (
+              <li key={c.key} className="row" style={{ gap: 10 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={on} onChange={toggle} style={{ width: 20, height: 20, accentColor: 'var(--ink)' }} />
+                  <span className="grow"><span className="t">{c.label}</span><span className="s num">{c.monthly ? `${c.down ? `${brl(c.down)} + ` : ''}${c.months}× ${brl(c.monthly)}` : brl(c.total)}</span></span>
+                </label>
+                <button className={`icon-btn sm${main ? '' : ' plain'}`} aria-label={`Principal: ${c.label}`} aria-pressed={main} onClick={() => { if (!on && pick.keys.length >= MAX_PLANS) { toast(`No máximo ${MAX_PLANS} formas`); return; } setPicks({ keys: on ? pick.keys : [...pick.keys, c.key], main: c.key }); }}>
+                  <Star size={16} fill={main ? 'currentColor' : 'none'} />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="sheet-actions">
+          <button className="btn btn-secondary" onClick={() => setAsk(null)}>Cancelar</button>
+          <button className="btn btn-primary" onClick={() => { const a = ask; setAsk(null); if (a === 'baixar') download(); else send(); }}>{ask === 'baixar' ? 'Baixar PDF' : 'Enviar'}</button>
+        </div>
+      </Sheet>
     </>
   );
 }

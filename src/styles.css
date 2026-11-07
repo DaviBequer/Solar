@@ -292,8 +292,6 @@ textarea.input { height: auto; min-height: 84px; padding: 12px 14px; resize: ver
 /* ---------- proposta / PDF ---------- */
 .doc-stage { overflow: hidden; margin: 14px -20px 0; }
 .doc-scale { transform-origin: top left; }
-.doc { width: 794px; min-height: 1123px; background: #fff; color: var(--ink); padding: 44px 56px 40px; display: flex; flex-direction: column; font-family: 'Lexend Variable', 'Lexend', sans-serif; box-shadow: 0 2px 16px rgba(20, 33, 63, 0.08); }
-.doc * { box-sizing: border-box; }
 .doc-actions { position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: 100%; max-width: var(--app-w); background: var(--surface); border-top: 1px solid var(--line); padding: 12px 20px calc(12px + var(--safe-b)); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; z-index: 40; }
 
 /* ---------- tabela de kits ---------- */
@@ -377,7 +375,6 @@ textarea.input { height: auto; min-height: 84px; padding: 12px 14px; resize: ver
   .no-print { display: none !important; }
   .doc-stage { margin: 0; overflow: visible; }
   .doc-scale { transform: none !important; height: auto !important; }
-  .doc { box-shadow: none; }
   @page { size: A4; margin: 0; }
 }
 

@@ -68,6 +68,8 @@ export interface Settings extends CalcParams {
   companyLogo: string | null;
   /** Logo da empresa contratada, só no contrato. Pode ser outra que a da proposta. */
   contractLogo?: string | null;
+  /** Frase pequena no pé das páginas da proposta, como um versículo. Vazia: nada aparece. */
+  proposalFooter?: string;
   sellerName: string;
   sellerPhone: string;
   interestRate: number;

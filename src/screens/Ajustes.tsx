@@ -92,7 +92,8 @@ export default function Ajustes() {
   const wide = useMedia('(min-width: 900px)');
   const [tab, setTab] = useState<AjTab>('proposta');
   const [vals, setVals] = useState<Partial<Settings>>({});
-  const [textSheet, setTextSheet] = useState<null | 'empresa' | 'vendedor' | 'contratada' | 'padrao'>(null);
+  const [textSheet, setTextSheet] = useState<null | 'empresa' | 'vendedor' | 'contratada' | 'padrao' | 'rodape'>(null);
+  const [footer, setFooter] = useState('');
   const [companyData, setCompanyData] = useState(settings.company);
   const [company, setCompany] = useState('');
   const [seller, setSeller] = useState('');
@@ -192,6 +193,7 @@ export default function Ajustes() {
           <Row label="Nome da empresa" value={settings.companyName || <span className="muted">Não definido</span>} onClick={() => { setCompany(settings.companyName); setTextSheet('empresa'); }} />
           <Row label="Seu nome e WhatsApp" value={settings.sellerName || <span className="muted">Não definido</span>} onClick={() => { setSeller(settings.sellerName); setSellerPhone(settings.sellerPhone); setTextSheet('vendedor'); }} />
           <Row label="Validade da proposta" value={`${settings.proposalValidityDays} dias`} onClick={() => openGroup('validade')} />
+          <Row label="Mensagem do rodapé" sub={settings.proposalFooter?.trim() || 'Nenhuma'} onClick={() => { setFooter(settings.proposalFooter ?? ''); setTextSheet('rodape'); }} />
         </ul>
         {settings.companyLogo && (
           <button className="link-btn" style={{ marginTop: 8 }} onClick={() => updateSettings({ companyLogo: null })}>Remover logo</button>
@@ -352,6 +354,16 @@ export default function Ajustes() {
           </div>
         ))}
         <div className="sheet-actions"><button className="btn btn-primary" onClick={() => setTextSheet(null)}>Pronto</button></div>
+      </Sheet>
+
+      <Sheet open={textSheet === 'rodape'} onClose={() => setTextSheet(null)} title="Mensagem do rodapé">
+        <Field label="Sai pequena no pé das duas páginas da proposta" htmlFor="aj-rodape">
+          <textarea id="aj-rodape" className="input" value={footer} maxLength={160} onChange={(e) => setFooter(e.target.value)} placeholder="Ex.: um versículo ou o lema da empresa" style={{ minHeight: 80 }} />
+        </Field>
+        <div className="sheet-actions">
+          <button className="btn btn-secondary" onClick={() => setTextSheet(null)}>Cancelar</button>
+          <button className="btn btn-primary" onClick={async () => { await updateSettings({ proposalFooter: footer.trim() }); setTextSheet(null); toast('Mensagem salva'); }}>Salvar</button>
+        </div>
       </Sheet>
 
       <Sheet open={textSheet === 'empresa'} onClose={() => setTextSheet(null)} title="Nome da empresa">
