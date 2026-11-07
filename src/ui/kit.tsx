@@ -6,19 +6,28 @@ import { num, parseBR } from '../core/format';
 
 export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
   useLayer(open, onClose);
+  const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    // Teclado aberto: a folha sobe acima dele (iPhone e Android que não encolhem a página)
+    const vv = window.visualViewport;
+    const fit = () => box.current?.style.setProperty('--kb', `${vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0}px`);
+    vv?.addEventListener('resize', fit);
+    vv?.addEventListener('scroll', fit);
+    fit();
     return () => {
       document.body.style.overflow = prev;
+      vv?.removeEventListener('resize', fit);
+      vv?.removeEventListener('scroll', fit);
     };
   }, [open]);
   if (!open) return null;
   return createPortal(
     <>
       <div className="backdrop" onClick={onClose} />
-      <div className="sheet" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="sheet" ref={box} role="dialog" aria-modal="true" aria-label={title}>
         <div className="sheet-grip" />
         <div className="sheet-head">
           <h2>{title}</h2>

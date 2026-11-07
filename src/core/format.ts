@@ -99,12 +99,6 @@ export function daysBetween(a: Date, b: Date): number {
   return Math.round((startOfDay(b).getTime() - startOfDay(a).getTime()) / 86400000);
 }
 
-/** Backup com mais de 7 dias. Sem backup nenhum, só avisa se já há dados a perder. */
-export function backupOverdue(lastBackupAt: string | null, hasData: boolean, now = new Date()): boolean {
-  if (!lastBackupAt) return hasData;
-  return daysBetween(new Date(lastBackupAt), now) > 7;
-}
-
 /** "Hoje", "Amanhã", "Ontem", "Sex, 7/11" */
 export function relativeDay(d: Date, now = new Date()): string {
   const diff = daysBetween(now, d);

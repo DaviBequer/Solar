@@ -1,5 +1,15 @@
 # Versões
 
+## 3.1.2 — 7 de novembro de 2026
+
+- Sem o aviso de backup ao abrir o app.
+- As janelas de baixo, como Novo cliente, sobem acima do teclado.
+- Importar fatura, Foto da fatura e Média de 12 meses viram três botões com ícone. A fatura escolhida ou fotografada fica nos anexos do cliente.
+- Limite da rede no mesmo visual dos outros campos, e sem o ícone no meio da quantidade de módulos.
+- Novo Padrão do orçamento em Ajustes: marca do módulo, potência e marca do inversor de todo orçamento novo.
+- Clientes: mesmo espaço entre a busca, os filtros e a lista.
+- Ficha do cliente: o orçamento aparece logo abaixo do status, com Proposta, Editar e Contrato. Orçamento salvo já fica como enviado. Depois da venda, o botão Orçamento vira Contrato.
+
 ## 3.1.1 — 7 de novembro de 2026
 
 - Contrato igual ao modelo em Word: mesmas fontes, margens, numeração, tabela, assinaturas e a logo no topo e no rodapé de cada página. Sai em PDF e em Word.

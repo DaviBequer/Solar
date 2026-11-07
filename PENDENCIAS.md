@@ -62,4 +62,4 @@ Resumo da conversa em que o Sonit foi reescrito (5 e 6 de novembro de 2026), par
 - Ele lembra de uma skill que analisa o código inteiro e mostra o resultado numa apresentação; ela não está na conta do claude.ai, provavelmente está no Claude Code do computador dele.
 
 ### Leitura da fatura
-- Os botões Importar fatura e Foto da fatura já estão no Orçamento, sem leitura. Falta o Davi mandar uma fatura da Celesc de exemplo.
+- Os botões Importar fatura e Foto da fatura já guardam o arquivo nos anexos do cliente, sem ler os números. Falta o Davi mandar uma fatura da Celesc de exemplo.

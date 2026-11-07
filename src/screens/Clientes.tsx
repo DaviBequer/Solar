@@ -92,7 +92,7 @@ export default function Clientes() {
         </div>
 
         {!q && (
-          <div className="chips mt-12" role="tablist" aria-label="Filtrar por status">
+          <div className="chips mt-16" role="tablist" aria-label="Filtrar por status">
             {ORDER.map((s) => (
               <button key={s} role="tab" className="chip" aria-selected={filter === s} onClick={() => pick(s)}>
                 {FILTER_LABEL[s]} {counts[s]}
@@ -102,7 +102,7 @@ export default function Clientes() {
         )}
 
         {!q && filter === 'negociando' && openTotal > 0 && <p className="muted" style={{ fontSize: 13, margin: '16px 0 8px' }}>{brl(openTotal)} em propostas abertas</p>}
-        {(q || filter !== 'negociando' || openTotal === 0) && <div style={{ height: 14 }} />}
+        {(q || filter !== 'negociando' || openTotal === 0) && <div style={{ height: 16 }} />}
 
         {rows.length > 0 ? (
           <ul className="list">

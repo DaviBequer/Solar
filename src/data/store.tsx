@@ -219,7 +219,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       proposal = { ...existing, input: structuredClone(d.input), result, updatedAt: now(), issuedAt: now() };
     } else {
       const number = settingsRef.current.nextProposalNumber;
-      proposal = { id: uid(), number, leadId: d.leadId, createdAt: now(), updatedAt: now(), issuedAt: now(), status: 'rascunho', input: structuredClone(d.input), result };
+      proposal = { id: uid(), number, leadId: d.leadId, createdAt: now(), updatedAt: now(), issuedAt: now(), status: 'enviado', input: structuredClone(d.input), result };
       await updateSettings({ nextProposalNumber: number + 1 });
     }
     await db.put('proposals', proposal);

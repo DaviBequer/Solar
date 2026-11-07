@@ -86,7 +86,7 @@ export default function Ajustes() {
   const confirm = useConfirm();
   const [group, setGroup] = useState<string | null>(null);
   const [vals, setVals] = useState<Partial<Settings>>({});
-  const [textSheet, setTextSheet] = useState<null | 'empresa' | 'vendedor' | 'contratada'>(null);
+  const [textSheet, setTextSheet] = useState<null | 'empresa' | 'vendedor' | 'contratada' | 'padrao'>(null);
   const [companyData, setCompanyData] = useState(settings.company);
   const [company, setCompany] = useState('');
   const [seller, setSeller] = useState('');
@@ -240,6 +240,7 @@ export default function Ajustes() {
         <h2 className="section-title">Preços e metas</h2>
         <ul className="list">
           <Row label="Tabela de kits" sub={kits.length === 0 ? 'Vazia: importe a planilha' : `${kits.length} ${kits.length === 1 ? 'kit' : 'kits'}`} onClick={() => navigate('/kits')} />
+          <Row label="Padrão do orçamento" sub={`${settings.defaultModuleBrand ?? 'Último usado'}, ${settings.defaultPanelW ? `${settings.defaultPanelW} W` : 'potência do último'}, inversor ${settings.defaultInverterBrand || 'qualquer'}`} onClick={() => setTextSheet('padrao')} />
           <Row label="Adicionais e regras" sub="Laje, híbrido, bateria e ampliação" onClick={() => openGroup('adicionais')} />
           <Row label="Meta de vendas por mês" value={settings.monthlyGoal ? brl(settings.monthlyGoal) : 'Sem meta'} onClick={() => openGroup('meta')} />
         </ul>
@@ -302,6 +303,29 @@ export default function Ajustes() {
             </div>
           </>
         )}
+      </Sheet>
+
+      <Sheet open={textSheet === 'padrao'} onClose={() => setTextSheet(null)} title="Padrão do orçamento">
+        <p className="muted" style={{ fontSize: 13, marginBottom: 4, lineHeight: 1.45 }}>Todo orçamento novo abre assim, para qualquer cliente. Dá para trocar no próprio orçamento.</p>
+        {([
+          ['Marca do módulo', 'defaultModuleBrand', Object.keys(settings.moduleBrandExtras ?? {})],
+          ['Potência do módulo', 'defaultPanelW', settings.panelPowers],
+          ['Marca do inversor', 'defaultInverterBrand', ['', ...Object.keys(settings.inverterBrandExtras ?? {})]],
+        ] as const).map(([title, key, opts]) => (
+          <div key={key}>
+            <p className="section-title">{title}</p>
+            <div className="chips wrap">
+              {(opts as readonly (string | number)[]).map((o) => (
+                <button key={o} className="chip" aria-pressed={settings[key] === o} onClick={() => {
+                  const patch = { [key]: o } as Partial<Settings>;
+                  updateSettings(patch);
+                  setDraft((d) => (d.proposalId ? d : { ...d, input: { ...d.input, ...(key === 'defaultPanelW' ? { panelW: o as number } : key === 'defaultModuleBrand' ? { moduleBrand: o as string } : { inverterBrand: o as string }), manualModules: null, manualInverter: null } }));
+                }}>{o === '' ? 'Qualquer' : typeof o === 'number' ? `${o} W` : o}</button>
+              ))}
+            </div>
+          </div>
+        ))}
+        <div className="sheet-actions"><button className="btn btn-primary" onClick={() => setTextSheet(null)}>Pronto</button></div>
       </Sheet>
 
       <Sheet open={textSheet === 'empresa'} onClose={() => setTextSheet(null)} title="Nome da empresa">

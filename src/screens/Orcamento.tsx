@@ -1,16 +1,17 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AlertTriangle, AudioWaveform, BadgeDollarSign, BatteryCharging, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, CirclePause, CirclePlay, CirclePlus, Cpu, FileUp, Grid2x2Plus, HandCoins, Plus, ReceiptText, Save, ScrollText, SlidersHorizontal, SquareStack, UtilityPole, Warehouse, X } from 'lucide-react';
+import { AudioWaveform, BadgeDollarSign, BatteryCharging, CalendarDays, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, CirclePause, CirclePlay, CirclePlus, Cpu, FileUp, Grid2x2Plus, HandCoins, Plus, ReceiptText, Save, ScrollText, SlidersHorizontal, UtilityPole, Warehouse, X } from 'lucide-react';
 import { TopBar } from '../ui/chrome';
 import { useToast } from '../ui/kit';
 import { useStore } from '../data/store';
 import { calculate, inverterBrandOf, inverterSize, installmentFor, kitKw } from '../core/calc';
 import { GRID_LABEL, INSTALLMENT_OPTIONS, LEAD_STATUS_LABEL, PAY_LABEL, ROOF_LABEL, SYSTEM_LABEL } from '../core/defaults';
-import { backupOverdue, brl, initials, monthsText, num, parseBR } from '../core/format';
+import { brl, initials, monthsText, num, parseBR } from '../core/format';
 import { horizonYears, inverterSizes, pickInverter, stepKit } from '../core/quote';
 import type { Grid, Lead, PayMethod, QuoteInput, Roof, Settings, SystemType } from '../core/types';
 import { navigate, useLayer } from '../router';
 import { day, projectionSvg, sceneSvg, startDay, whenPaid } from './casa';
 import { ClientPicker, MonthlySheet } from './orcamento-sheets';
+import { shrinkPhoto } from '../ui/images';
 import './orcamento.css';
 
 type PopName = 'grid' | 'roof' | 'brand' | 'power' | 'inverter' | 'ibrand' | 'folga' | 'inst' | 'carport';
@@ -138,11 +139,11 @@ function PickBtn({ label, value, Icon, onOpen }: { label: string; value: string;
   );
 }
 
-function TapQty({ big, sub, Icon, onStep }: { big: number; sub: string; Icon?: typeof Cpu; onStep: (d: number) => void }) {
+function TapQty({ big, sub, onStep }: { big: number; sub: string; onStep: (d: number) => void }) {
   return (
     <div className="tap">
       <button className="l" aria-label={`Menos, ${sub}`} onClick={() => onStep(-1)}><ChevronLeft size={18} /></button>
-      <span><b className="num">{big}</b><small className="num">{Icon && <Icon size={13} />}{sub}</small></span>
+      <span><b className="num">{big}</b><small className="num">{sub}</small></span>
       <button className="r" aria-label={`Mais, ${sub}`} onClick={() => onStep(1)}><ChevronRight size={18} /></button>
     </div>
   );
@@ -189,10 +190,13 @@ function Scene({ total, existing, type, bats, generation, coverage }: { total: n
 }
 
 export default function Orcamento() {
-  const { draft, setDraft, newDraft, selectClient, keepCurrentClient, kits, leads, proposals, saveDraftAsProposal, settings, updateSettings } = useStore();
+  const { draft, setDraft, newDraft, selectClient, keepCurrentClient, kits, leads, proposals, saveDraftAsProposal, settings, updateSettings, addAttachment } = useStore();
   const toast = useToast();
   const [sheet, setSheet] = useState<'client' | 'monthly' | 'custom' | 'config' | null>(null);
   const [afterPick, setAfterPick] = useState<null | 'save' | 'proposal'>(null);
+  const billFile = useRef<File | null>(null);
+  const fileIn = useRef<HTMLInputElement>(null);
+  const photoIn = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [pop, setPop] = useState<{ name: PopName; anchor: DOMRect; edit: boolean } | null>(null);
   const [panel, setPanel] = useState<'info' | 'com' | null>(null);
@@ -241,10 +245,25 @@ export default function Orcamento() {
     else toast(editing ? 'Orçamento atualizado' : 'Orçamento salvo');
   }
 
+  /** Fatura enviada pelo cliente: fica nos anexos dele. A leitura dos números vem quando houver uma fatura de exemplo. */
+  async function attachBill(file: File, to: Lead) {
+    billFile.current = null;
+    await addAttachment(to.id, await shrinkPhoto(file));
+    toast(`Fatura salva nos anexos de ${to.name.split(' ')[0]}`);
+  }
+
+  async function onBill(file: File | undefined) {
+    if (!file) return;
+    if (lead) return attachBill(file, lead);
+    billFile.current = file;
+    setSheet('client');
+  }
+
   async function onPickClient(l: Lead) {
     setSheet(null);
     setBusy(true);
     await selectClient(l.id);
+    if (billFile.current) await attachBill(billFile.current, l);
     const intent = afterPick;
     setAfterPick(null);
     const saved = intent ? await saveDraftAsProposal() : null;
@@ -380,13 +399,6 @@ export default function Orcamento() {
     <div className="orc">
       <TopBar />
       <main className="orc-page">
-        {backupOverdue(settings.lastBackupAt, leads.length > 0 || proposals.length > 0) && (
-          <div className="notice" role="status">
-            <AlertTriangle size={16} />
-            <span style={{ flex: 1 }}>{settings.lastBackupAt ? 'Seu último backup tem mais de 7 dias.' : 'Você ainda não fez nenhum backup.'} Os dados ficam só neste aparelho.</span>
-            <button className="link-btn" onClick={() => navigate('/ajustes')}>Fazer backup</button>
-          </div>
-        )}
         <div className="orc-head">
           <h1>{editing ? `Orçamento nº ${editing.number}` : 'Novo orçamento'}</h1>
           {(editing || input.billValue > 0) && <button className="link-btn" disabled={busy} onClick={startAnother}>Começar outro</button>}
@@ -440,11 +452,13 @@ export default function Orcamento() {
                 {([[0, 'Sem folga'], [10, '10%'], [20, '20%']] as const).map(([m, t]) => <button key={m} aria-pressed={p.safetyMargin === m} onClick={() => set({ params: { ...p, safetyMargin: m }, ...resetKit })}>{t}</button>)}
                 <button aria-pressed={customMargin} onClick={(e) => open('folga')(e.currentTarget.getBoundingClientRect())}>{customMargin ? `${p.safetyMargin}%` : 'Personalizado'}</button>
               </div>
-              <div className="bill-links">
-                <button className="link-btn" onClick={() => toast('Leitura da fatura ainda não está pronta. Mande uma fatura de exemplo no chat.')}><FileUp size={14} />Importar fatura</button>
-                <button className="link-btn" onClick={() => toast('Leitura da fatura ainda não está pronta. Mande uma fatura de exemplo no chat.')}><Camera size={14} />Foto da fatura</button>
+              <div className="bill-acts">
+                <button onClick={() => fileIn.current?.click()}><i><FileUp size={20} /></i>Importar fatura</button>
+                <button onClick={() => photoIn.current?.click()}><i><Camera size={20} /></i>Foto da fatura</button>
+                <button aria-pressed={!!input.monthly} onClick={() => setSheet('monthly')}><i><CalendarDays size={20} /></i>{input.monthly ? `Média de ${input.monthly.filter((v) => v > 0).length} meses` : 'Média de 12 meses'}</button>
               </div>
-              <button className="link-btn month-l" onClick={() => setSheet('monthly')}>{input.monthly ? `Média de ${input.monthly.filter((v) => v > 0).length} meses` : 'Média de 12 meses'}</button>
+              <input ref={fileIn} type="file" accept="image/*,application/pdf" hidden onChange={(e) => { onBill(e.target.files?.[0]); e.target.value = ''; }} />
+              <input ref={photoIn} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { onBill(e.target.files?.[0]); e.target.value = ''; }} />
             </section>
           </div>
 
@@ -464,7 +478,7 @@ export default function Orcamento() {
               )}
               <div className="trio">
                 <button className="pick" onClick={(e) => open('brand')(e.currentTarget.getBoundingClientRect())}><small>Marca</small><b>{input.moduleBrand}</b></button>
-                <TapQty big={r.modules} sub={amp ? 'módulos a mais' : 'módulos'} Icon={SquareStack} onStep={step} />
+                <TapQty big={r.modules} sub={amp ? 'módulos a mais' : 'módulos'} onStep={step} />
                 <button className="pick" onClick={(e) => open('power')(e.currentTarget.getBoundingClientRect())}><small>Potência</small><b className="num">{r.panelW} W</b></button>
               </div>
               {!amp && (
@@ -473,7 +487,12 @@ export default function Orcamento() {
                     <PickBtn label="Inversor" value={r.kit ? inverterSize(r.kit.inverter) : '—'} Icon={AudioWaveform} onOpen={open('inverter')} />
                     <PickBtn label="Marca do inversor" value={input.inverterBrand || (r.kit ? inverterBrandOf(r.kit.inverter) || '—' : '—')} onOpen={open('ibrand')} />
                   </div>
-                  {p.gridLimits && <p className="lim-t num">{GRID_LABEL[input.grid]}: até {FMT.kW(p.gridLimits[input.grid].inverterKw)} e {p.gridLimits[input.grid].modules} módulos</p>}
+                  {p.gridLimits && (
+                    <div className="lim-t">
+                      <i><UtilityPole size={15} /></i>
+                      <span><small>Limite da rede {GRID_LABEL[input.grid].toLowerCase()}</small><b className="num">Inversor até {FMT.kW(p.gridLimits[input.grid].inverterKw)}, {p.gridLimits[input.grid].modules} módulos</b></span>
+                    </div>
+                  )}
                   {input.manualModules && <button className="sec" onClick={() => set(resetKit)}>Voltar ao kit indicado para esta conta</button>}
                 </>
               )}
@@ -629,7 +648,7 @@ export default function Orcamento() {
         </Modal>
       )}
 
-      <ClientPicker open={sheet === 'client'} onClose={() => { setAfterPick(null); setSheet(null); }} onPick={onPickClient} />
+      <ClientPicker open={sheet === 'client'} onClose={() => { setAfterPick(null); billFile.current = null; setSheet(null); }} onPick={onPickClient} />
       <MonthlySheet key={`${draft.proposalId}-${draft.leadId}-${input.monthly ? 'm' : 'n'}`} open={sheet === 'monthly'} onClose={() => setSheet(null)} input={input} set={set} />
     </div>
   );

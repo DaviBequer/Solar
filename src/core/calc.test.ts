@@ -4,7 +4,7 @@ import { DEFAULT_SETTINGS, newQuoteInput } from './defaults';
 import { kitsToCsv, parseKitsCsv, parseMoney } from './csv';
 import defaultKitsCsv from '../data/default-kits.csv?raw';
 import { horizonYears, inverterSizes, keepOnLeave, pickInverter, stepKit, withSettings } from './quote';
-import { backupOverdue, monthsText, parseBR } from './format';
+import { monthsText, parseBR } from './format';
 import type { Kit, QuoteInput } from './types';
 
 const kits: Kit[] = [
@@ -290,15 +290,6 @@ describe('formatos', () => {
     expect(parseBR('0.920')).toBe(0.92);
     expect(parseBR('23.4')).toBe(23.4);
   });
-  it('avisa do backup só depois de 7 dias', () => {
-    const now = new Date(2026, 10, 20, 12);
-    expect(backupOverdue(new Date(2026, 10, 13, 12).toISOString(), true, now)).toBe(false);
-    expect(backupOverdue(new Date(2026, 10, 12, 12).toISOString(), true, now)).toBe(true);
-  });
-  it('sem backup nenhum, só avisa se há dados', () => {
-    expect(backupOverdue(null, true)).toBe(true);
-    expect(backupOverdue(null, false)).toBe(false);
-  });
   it('rótulo do inversor numérico ganha a marca', () => {
     expect(inverterLabel('6', 'SOFAR')).toBe('SOFAR 6 kW');
     expect(inverterLabel('5,5', '')).toBe('5,5 kW');
@@ -392,5 +383,13 @@ describe('limites e acréscimos da v3.1', () => {
     expect(keepOnLeave({ ...a }, saved, { soldProposalId: null })).toBe(false);
     expect(keepOnLeave({ ...a, billValue: 1 }, saved, { soldProposalId: null })).toBe(true);
     expect(keepOnLeave({ ...a, billValue: 1 }, saved, { soldProposalId: 'p' })).toBe(false);
+  });
+});
+
+describe('padrão do orçamento', () => {
+  it('ajuste de padrão vence o último usado; sem padrão, segue o último', () => {
+    const prev = { panelW: 585, moduleBrand: 'DMEGC', inverterBrand: 'SAJ' };
+    expect(newQuoteInput({ ...DEFAULT_SETTINGS, defaultPanelW: 700, defaultModuleBrand: 'WEG', defaultInverterBrand: '' }, prev)).toMatchObject({ panelW: 700, moduleBrand: 'WEG', inverterBrand: '' });
+    expect(newQuoteInput(DEFAULT_SETTINGS, prev)).toMatchObject(prev);
   });
 });

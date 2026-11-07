@@ -74,6 +74,10 @@ export interface Settings extends CalcParams {
   proposalValidityDays: number;
   nextProposalNumber: number;
   lastBackupAt: string | null;
+  /** Padrão de todo orçamento novo. Vazio: segue o último usado. */
+  defaultModuleBrand?: string;
+  defaultInverterBrand?: string;
+  defaultPanelW?: number;
   company: CompanyData;
   /** Modelo de contrato próprio, em Word (base64). Vazio usa o padrão do app. */
   contractDocx: string | null;

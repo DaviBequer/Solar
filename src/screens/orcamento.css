@@ -4,7 +4,6 @@
 .orc button { cursor: pointer; border: 0; background: none; padding: 0; }
 .orc svg { display: block; flex-shrink: 0; }
 .orc-page { padding: 0 16px calc(var(--tabbar-h) + var(--safe-b) + 96px); max-width: 720px; margin: 0 auto; }
-.orc .notice { margin-bottom: 12px; }
 .orc-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 2px 12px; }
 .orc-head h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
 .orc-grid, .orc .col { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-content: start; min-width: 0; }
@@ -66,7 +65,6 @@
 .orc .seg.fg { margin-top: 10px; }
 .orc .seg.fg button { flex: 1 1 auto; padding: 0 6px; font-size: 12.5px; }
 .orc .seg.mini button { min-height: 32px; padding: 0 9px; font-size: 12px; }
-.orc .month-l { display: block; margin: 10px 2px 0 auto; font-size: 12px; }
 
 /* escolhas */
 .orc .picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -96,8 +94,11 @@
 .orc .tap span { padding: 6px 26px; pointer-events: none; }
 .orc .tap b { display: block; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
 .orc .tap small { display: block; font-size: 11px; font-weight: 600; color: #c8d0e0; }
-.orc .tap small svg { display: inline-block; vertical-align: -2px; margin-right: 4px; color: var(--gold-l); }
-.orc .lim-t { margin: 8px 0 0; text-align: center; font-size: 12.5px; font-weight: 700; color: var(--gold-x); }
+.orc .lim-t { display: flex; align-items: center; gap: 10px; margin-top: 8px; background: var(--soft); border-radius: 14px; padding: 8px 12px; min-width: 0; }
+.orc .lim-t i { width: 30px; height: 30px; border-radius: 9px; background: var(--navy); color: var(--gold-l); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.orc .lim-t span { min-width: 0; }
+.orc .lim-t small { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.orc .lim-t b { display: block; font-size: 13.5px; font-weight: 800; overflow-wrap: anywhere; }
 .orc .sec { width: 100%; margin-top: 10px; min-height: 44px; border-radius: 12px; background: var(--soft); font-size: 13.5px; font-weight: 700; }
 .orc .sec-s { padding: 6px 10px; border-radius: 9px; background: var(--soft); font-size: 12px; font-weight: 700; }
 .orc .lbl { font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
@@ -220,5 +221,8 @@
   .orc .big strong { font-size: clamp(40px, 3vw, 56px); }
 }
 
-.orc .bill-links { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
-.orc .bill-links .link-btn { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }
+.orc .bill-acts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.orc .bill-acts button { display: grid; justify-items: center; gap: 6px; text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); line-height: 1.25; min-width: 0; }
+.orc .bill-acts i { width: 46px; height: 46px; border-radius: 14px; background: var(--navy); color: var(--gold-l); display: flex; align-items: center; justify-content: center; }
+.orc .bill-acts [aria-pressed='true'] { color: var(--ink); }
+.orc .bill-acts [aria-pressed='true'] i { background: radial-gradient(circle at 35% 30%, #f7e4b6, var(--gold)); color: var(--navy); box-shadow: 0 0 18px var(--glow); }

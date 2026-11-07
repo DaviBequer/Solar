@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Bell, ChevronLeft, ChevronRight, LocateFixed, MapPin, MessageCircle, MoreHorizontal, Navigation, Phone, Plus, Share2, Sunrise, Trash2 } from 'lucide-react';
+import { Bell, ChevronLeft, ChevronRight, FilePen, FileSignature, FileText, LocateFixed, MapPin, MessageCircle, MoreHorizontal, Navigation, Phone, Plus, Share2, Sunrise, Trash2 } from 'lucide-react';
 import { Field, Sheet, useConfirm, useToast } from '../ui/kit';
 import { nextTaskOf, useStore } from '../data/store';
-import { isSoldProposal, proposalsOf, saleCommission } from '../core/sale';
+import { currentProposal, isSoldProposal, proposalsOf, saleCommission } from '../core/sale';
 import { mapsUrl, whatsappUrl } from '../core/links';
 import { Attachments } from './attachments';
 import { SaleSheet } from './sale-sheet';
@@ -127,6 +127,12 @@ export default function Ficha({ id }: { id: string }) {
   }
 
   const statusOrder: LeadStatus[] = ['novo', 'negociando', 'vendido', 'perdido'];
+  const sold = lead.status === 'vendido';
+  // Vendido: o orçamento da venda; senão, o último que não foi recusado
+  const main = (sold && props.find((p) => p.id === lead.soldProposalId)) || currentProposal(proposals, id);
+  const openContract = (pid: string) => { setActiveProposal(pid); setSheet('contract'); };
+  const editProposal = (p: NonNullable<typeof main>) => { openProposalInDraft(p); navigate('/orcamento', true); };
+  const newQuote = async () => { await selectClient(lead.id); navigate('/orcamento', true); };
   const commission = lead.status === 'vendido' ? saleCommission(lead, proposals) : null;
   const taskForSheet = editingTask ? tasks.find((t) => t.id === editingTask) ?? null : null;
 
@@ -157,6 +163,29 @@ export default function Ficha({ id }: { id: string }) {
           ))}
         </div>
 
+        {main ? (
+          <section className="quote-card mt-12">
+            <button className="qc-top" onClick={() => { setActiveProposal(main.id); setSheet('proposal'); }}>
+              <span>
+                <small>Orçamento nº {main.number}, {dateShort(main.updatedAt)}</small>
+                <b className="num">{brl(main.result.finalPrice)}</b>
+                <small className="num">{main.input.systemType !== 'ongrid' ? `${SYSTEM_LABEL[main.input.systemType]}, ` : ''}{main.result.modules} × {main.result.panelW} W, {main.input.payment.method === 'vista' ? 'à vista' : `${main.result.installments}× ${brl(main.result.installmentValue)}`}</small>
+              </span>
+              <span className={`pill sm ${sold ? 'gold' : main.status === 'recusado' ? '' : 'navy'}`}>{sold ? 'Vendido' : PROPOSAL_STATUS_LABEL[main.status]}</span>
+            </button>
+            <div className="qc-acts">
+              <button onClick={() => navigate(`/proposta/${main.id}`)}><i><FileText size={19} /></i>Proposta</button>
+              <button onClick={() => editProposal(main)}><i><FilePen size={19} /></i>Editar</button>
+              <button className={sold ? 'hi' : ''} onClick={() => openContract(main.id)}><i><FileSignature size={19} /></i>Contrato</button>
+            </div>
+          </section>
+        ) : (
+          <section className="card pad mt-12" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ flex: 1, fontSize: 14 }} className="muted">Nenhum orçamento ainda</span>
+            <button className="btn btn-primary btn-sm" onClick={newQuote}><Sunrise size={16} />Montar orçamento</button>
+          </section>
+        )}
+
         {commission && (
           <section className="card pad mt-12" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ flex: 1 }}>
@@ -173,7 +202,7 @@ export default function Ficha({ id }: { id: string }) {
           {phone ? <a href={whatsappUrl(phone)} target="_blank" rel="noreferrer"><MessageCircle size={20} />WhatsApp</a> : <button onClick={() => setSheet('edit')}><MessageCircle size={20} />WhatsApp</button>}
           {phone ? <a href={`tel:${phone}`}><Phone size={20} />Ligar</a> : <button onClick={() => setSheet('edit')}><Phone size={20} />Ligar</button>}
           {maps ? <a href={maps} target="_blank" rel="noreferrer"><Navigation size={20} />Rota</a> : <button onClick={() => setSheet('edit')}><Navigation size={20} />Rota</button>}
-          <button className="main" onClick={async () => { await selectClient(lead.id); navigate('/orcamento', true); }}><Sunrise size={20} />Orçamento</button>
+          {sold && main ? <button className="main" onClick={() => openContract(main.id)}><FileSignature size={20} />Contrato</button> : <button className="main" onClick={newQuote}><Sunrise size={20} />Orçamento</button>}
         </div>
 
         {next ? (
@@ -210,8 +239,8 @@ export default function Ficha({ id }: { id: string }) {
 
         </div>
         <div>
-        <h2 className="section-title">Orçamentos</h2>
-        {props.length > 0 ? (
+        {props.length > 1 && <h2 className="section-title">Todos os orçamentos</h2>}
+        {props.length > 1 && (
           <ul className="list">
             {props.map((p) => (
               <li key={p.id}>
@@ -227,8 +256,6 @@ export default function Ficha({ id }: { id: string }) {
               </li>
             ))}
           </ul>
-        ) : (
-          <div className="card empty">Nenhum orçamento ainda. Toque em Orçamento para montar o primeiro.</div>
         )}
 
         <h2 className="section-title">Registros</h2>
@@ -326,9 +353,9 @@ export default function Ficha({ id }: { id: string }) {
               </>
             )}
             <div className="stack mt-16">
-              <button className="btn btn-primary btn-block" onClick={() => { const p = activeProposal; setSheet(null); setActiveProposal(null); navigate(`/proposta/${p.id}`); }}>Ver proposta em PDF</button>
-              <button className="btn btn-secondary btn-block" onClick={() => setSheet('contract')}>Gerar contrato</button>
-              <button className="btn btn-secondary btn-block" onClick={() => { const p = activeProposal; openProposalInDraft(p); setSheet(null); setActiveProposal(null); navigate('/orcamento', true); }}>Abrir no orçamento para editar</button>
+              <button className="btn btn-primary btn-block" onClick={() => { const p = activeProposal; setSheet(null); setActiveProposal(null); navigate(`/proposta/${p.id}`); }}><FileText size={18} />Ver proposta em PDF</button>
+              <button className="btn btn-secondary btn-block" onClick={() => setSheet('contract')}><FileSignature size={18} />Gerar contrato</button>
+              <button className="btn btn-secondary btn-block" onClick={() => { const p = activeProposal; setSheet(null); setActiveProposal(null); editProposal(p); }}><FilePen size={18} />Abrir no orçamento para editar</button>
               <button
                 className="btn btn-danger btn-block"
                 onClick={async () => {
@@ -344,7 +371,7 @@ export default function Ficha({ id }: { id: string }) {
                   }
                 }}
               >
-                Apagar orçamento
+                <Trash2 size={18} />Apagar orçamento
               </button>
             </div>
           </>
