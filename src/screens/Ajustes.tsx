@@ -2,15 +2,17 @@ import { useRef, useState, type ReactNode } from 'react';
 import { Bell, ChevronLeft, ChevronRight, ImagePlus } from 'lucide-react';
 import { Field, NumberField, Sheet, useConfirm, useToast } from '../ui/kit';
 import { useStore } from '../data/store';
-import { brl, num, phoneMask } from '../core/format';
+import { brl, documentMask, num, phoneMask } from '../core/format';
 import { withSettings } from '../core/quote';
-import { parseTemplate, templateProblem } from '../core/contract';
+import { companyMissing, templateProblem } from '../core/contract';
+import { bytesToBase64, docxText, readDocx } from '../core/contract-docx';
 import type { Settings } from '../core/types';
 import { goBack, navigate } from '../router';
 import { parseBackup } from '../data/backup';
 import { askNotificationPermission } from '../reminders';
 import { APP_VERSION } from '../ui/chrome';
-import { DOCX_TYPE, deliverFile } from '../ui/deliver';
+import { deliverFile } from '../ui/deliver';
+import { modelFile } from './contract-file';
 import { logoDataUrl } from '../ui/images';
 
 type NumKey = { [K in keyof Settings]-?: Settings[K] extends number ? K : never }[keyof Settings];
@@ -84,7 +86,8 @@ export default function Ajustes() {
   const confirm = useConfirm();
   const [group, setGroup] = useState<string | null>(null);
   const [vals, setVals] = useState<Partial<Settings>>({});
-  const [textSheet, setTextSheet] = useState<null | 'empresa' | 'vendedor'>(null);
+  const [textSheet, setTextSheet] = useState<null | 'empresa' | 'vendedor' | 'contratada'>(null);
+  const [companyData, setCompanyData] = useState(settings.company);
   const [company, setCompany] = useState('');
   const [seller, setSeller] = useState('');
   const [sellerPhone, setSellerPhone] = useState('');
@@ -124,10 +127,12 @@ export default function Ajustes() {
     }
   }
 
-  async function exportContract(template: string) {
-    const { blocksToDocx } = await import('../core/contract-docx');
-    await deliverFile(new File([blocksToDocx(parseTemplate(template)).slice()], 'Modelo de contrato.docx', { type: DOCX_TYPE }), 'Modelo de contrato');
-    toast('Modelo exportado');
+  async function exportContract() {
+    try {
+      if ((await deliverFile(await modelFile(settings), 'Modelo de contrato')) === 'downloaded') toast('Modelo exportado');
+    } catch {
+      toast('Não foi possível exportar o modelo');
+    }
   }
 
   async function doRestore(f: File) {
@@ -193,28 +198,31 @@ export default function Ajustes() {
 
         <h2 className="section-title">Contrato</h2>
         <ul className="list">
-          <Row label="Importar modelo" sub="Word ou texto. Fica só neste aparelho e entra no backup" value={settings.contractTemplate ? 'Importado' : <span className="muted">Não importado</span>} onClick={() => contractRef.current?.click()} />
-          {settings.contractTemplate && <Row label="Exportar em Word" sub="Para editar e importar de novo" onClick={() => exportContract(settings.contractTemplate!)} />}
+          <Row label="Dados da empresa" sub="Saem no contrato. Os do cliente vêm da ficha" value={companyMissing(settings.company).length ? <span className="muted">A preencher</span> : settings.company.legalName} onClick={() => { setCompanyData(settings.company); setTextSheet('contratada'); }} />
+          <Row label="Modelo de contrato" sub="Exporte em Word para editar e importe de novo" value={settings.contractDocx ? 'Próprio' : 'Padrão'} onClick={() => contractRef.current?.click()} />
+          <Row label="Exportar modelo em Word" onClick={exportContract} />
+          {settings.contractDocx && <Row label="Voltar ao modelo padrão" onClick={async () => { await updateSettings({ contractDocx: null }); toast('Modelo padrão em uso'); }} />}
         </ul>
         <input
           ref={contractRef}
           type="file"
-          accept=".docx,.txt,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           hidden
           onChange={async (e) => {
             const f = e.target.files?.[0];
             e.target.value = '';
             if (!f) return;
+            let bytes: Uint8Array;
             let text: string;
             try {
-              const { docxToTemplate } = await import('../core/contract-docx');
-              text = /\.docx$/i.test(f.name) ? await docxToTemplate(new Uint8Array(await f.arrayBuffer())) : await f.text();
+              bytes = new Uint8Array(await f.arrayBuffer());
+              text = docxText(await readDocx(bytes));
             } catch {
               return toast('Não foi possível ler este arquivo');
             }
             const problem = templateProblem(text);
             if (problem) return toast(problem);
-            await updateSettings({ contractTemplate: text });
+            await updateSettings({ contractDocx: bytesToBase64(bytes) });
             toast('Modelo importado');
           }}
         />
@@ -314,6 +322,27 @@ export default function Ajustes() {
         <div className="sheet-actions">
           <button className="btn btn-secondary" onClick={() => setTextSheet(null)}>Cancelar</button>
           <button className="btn btn-primary" onClick={async () => { await updateSettings({ sellerName: seller.trim(), sellerPhone }); setTextSheet(null); }}>Salvar</button>
+        </div>
+      </Sheet>
+      <Sheet open={textSheet === 'contratada'} onClose={() => setTextSheet(null)} title="Dados da empresa">
+        <div className="stack">
+          <Field label="Razão social" htmlFor="co-name"><input id="co-name" className="input" value={companyData.legalName} onChange={(e) => setCompanyData({ ...companyData, legalName: e.target.value })} /></Field>
+          <Field label="CNPJ" htmlFor="co-cnpj"><input id="co-cnpj" className="input" inputMode="numeric" value={companyData.cnpj} onChange={(e) => setCompanyData({ ...companyData, cnpj: documentMask(e.target.value) })} placeholder="00.000.000/0000-00" /></Field>
+          <Field label="Endereço da sede" htmlFor="co-addr"><textarea id="co-addr" className="input" value={companyData.address} onChange={(e) => setCompanyData({ ...companyData, address: e.target.value })} placeholder="Rua, número, bairro, CEP e cidade" style={{ minHeight: 72 }} /></Field>
+          <div className="grid-2">
+            <Field label="Cidade do foro" htmlFor="co-city"><input id="co-city" className="input" value={companyData.city} onChange={(e) => setCompanyData({ ...companyData, city: e.target.value })} /></Field>
+            <Field label="UF" htmlFor="co-uf"><input id="co-uf" className="input" maxLength={2} value={companyData.uf} onChange={(e) => setCompanyData({ ...companyData, uf: e.target.value.toUpperCase() })} /></Field>
+          </div>
+          <Field label="Representante" htmlFor="co-rep"><input id="co-rep" className="input" value={companyData.representative} onChange={(e) => setCompanyData({ ...companyData, representative: e.target.value })} /></Field>
+          <button className="row" style={{ border: 0, background: 'transparent', padding: 0 }} onClick={() => logoRef.current?.click()}>
+            {settings.companyLogo ? <img src={settings.companyLogo} alt="" style={{ width: 56, height: 40, objectFit: 'contain' }} /> : null}
+            <span className="grow"><span className="t" style={{ fontSize: 14 }}>Logo no contrato e na proposta</span></span>
+            <span className="link-btn">{settings.companyLogo ? 'Trocar' : 'Escolher'}</span>
+          </button>
+        </div>
+        <div className="sheet-actions">
+          <button className="btn btn-secondary" onClick={() => setTextSheet(null)}>Cancelar</button>
+          <button className="btn btn-primary" onClick={async () => { await updateSettings({ company: companyData }); setTextSheet(null); toast('Dados da empresa salvos'); }}>Salvar</button>
         </div>
       </Sheet>
     </>

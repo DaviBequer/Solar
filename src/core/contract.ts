@@ -1,15 +1,11 @@
 import { num } from './format';
-import type { Lead, Proposal } from './types';
+import type { CompanyData, Lead, Proposal } from './types';
 
-export type ContractBlock =
-  | { kind: 'title' | 'heading' | 'para' | 'indent' | 'sign'; text: string }
-  | { kind: 'table'; rows: string[][] };
-
-const FIELDS = ['nome', 'qualificacao', 'documento', 'endereco', 'geracao', 'kwp', 'inversor', 'modulos', 'modulo', 'valor', 'pagamento', 'data'];
+const FIELDS = ['nome', 'qualificacao', 'documento', 'endereco', 'geracao', 'kwp', 'inversor', 'modulos', 'modulo', 'valor', 'pagamento', 'data', 'empresa', 'empresaCnpj', 'empresaSede', 'representante', 'cidade', 'cidadeMaiuscula', 'uf'];
 
 /** Modelo é arquivo de fora do app: confere antes de guardar, para o erro aparecer na importação. */
 export function templateProblem(template: string): string | null {
-  if (!template.includes('{{nome}}')) return 'Este arquivo não é um modelo de contrato do Sonit.';
+  if (!template.includes('{{nome}}')) return 'Este arquivo não é um modelo de contrato do Sonit. Exporte o modelo em Word, edite e importe esse arquivo.';
   const unknown = [...template.matchAll(/\{\{(.*?)\}\}/g)].map((m) => m[1]).find((f) => !FIELDS.includes(f));
   return unknown ? `O modelo tem um campo desconhecido: ${unknown}.` : null;
 }
@@ -28,6 +24,12 @@ export function contractMissing(lead: Pick<Lead, 'name' | 'address' | 'document'
   return missing;
 }
 
+/** O que falta nos dados da empresa, em Ajustes. */
+export function companyMissing(c: CompanyData): string[] {
+  const labels: [keyof CompanyData, string][] = [['legalName', 'razão social'], ['cnpj', 'CNPJ'], ['address', 'endereço da sede'], ['city', 'cidade do foro'], ['uf', 'UF'], ['representative', 'representante']];
+  return labels.filter(([k]) => !c[k].trim()).map(([, l]) => l);
+}
+
 const reais = (n: number) => `R$ ${num(n, 2)}`;
 
 /** Texto inicial da forma de pagamento. Quem gera pode completar, por exemplo com o banco. */
@@ -42,32 +44,13 @@ function qualification(lead: Lead): string {
   const doc = lead.document ?? '';
   if (digits(doc).length === 14) return `pessoa jurídica, inscrita no CNPJ nº ${doc}`;
   const [y, m, d] = (lead.birthDate ?? '').split('-');
-  return `pessoa física, nascido(a) em ${d}/${m}/${y}, inscrito(a) no CPF nº ${doc}`;
+  return `pessoa física, nascido(a) na data ${d}/${m}/${y}, inscrito(a) no CPF nº ${doc}`;
 }
 
-/** Lê o texto do modelo em blocos. A conversão de campos vem de quem chama. */
-export function parseTemplate(template: string, fill: (line: string) => string = (s) => s): ContractBlock[] {
-  const blocks: ContractBlock[] = [];
-  for (const raw of template.split(/\r?\n/)) {
-    const line = fill(raw.trim());
-    if (!line) continue;
-    if (line.startsWith('| ')) {
-      const row = line.slice(2).split(' | ').map((c) => c.trim());
-      const last = blocks.at(-1);
-      if (last?.kind === 'table') last.rows.push(row);
-      else blocks.push({ kind: 'table', rows: [row] });
-    } else if (line.startsWith('## ')) blocks.push({ kind: 'heading', text: line.slice(3) });
-    else if (line.startsWith('# ')) blocks.push({ kind: 'title', text: line.slice(2) });
-    else if (line.startsWith('> ')) blocks.push({ kind: 'indent', text: line.slice(2) });
-    else if (line.startsWith('_ ')) blocks.push({ kind: 'sign', text: line.slice(2) });
-    else blocks.push({ kind: 'para', text: line });
-  }
-  return blocks;
-}
-
-export function buildContract(template: string, lead: Lead, proposal: Proposal, payment: string, today = new Date()): ContractBlock[] {
+/** Todos os campos do contrato: cliente e orçamento vêm da ficha, a empresa vem de Ajustes. */
+export function contractValues(lead: Lead, proposal: Proposal, payment: string, company: CompanyData, today = new Date()): Record<string, string> {
   const r = proposal.result;
-  const values: Record<string, string> = {
+  return {
     nome: lead.name.trim(),
     qualificacao: qualification(lead),
     documento: lead.document ?? '',
@@ -80,6 +63,12 @@ export function buildContract(template: string, lead: Lead, proposal: Proposal, 
     valor: reais(r.finalPrice),
     pagamento: payment.trim(),
     data: today.toLocaleDateString('pt-BR'),
+    empresa: company.legalName.trim(),
+    empresaCnpj: company.cnpj.trim(),
+    empresaSede: company.address.trim(),
+    representante: company.representative.trim(),
+    cidade: company.city.trim(),
+    cidadeMaiuscula: company.city.trim().toLocaleUpperCase('pt-BR'),
+    uf: company.uf.trim().toUpperCase(),
   };
-  return parseTemplate(template, (s) => s.replace(/\{\{(.*?)\}\}/g, (_, f: string) => values[f] ?? ''));
 }

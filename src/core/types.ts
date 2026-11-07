@@ -51,6 +51,18 @@ export interface CalcParams {
   inverterBrandExtras?: Record<string, number>;
 }
 
+/** Dados da empresa no contrato. Ficam só no aparelho e no backup: o repositório do app é público. */
+export interface CompanyData {
+  legalName: string;
+  cnpj: string;
+  /** Rua, número, bairro, CEP e cidade da sede, como sai no contrato */
+  address: string;
+  /** Cidade do foro e da assinatura */
+  city: string;
+  uf: string;
+  representative: string;
+}
+
 export interface Settings extends CalcParams {
   companyName: string;
   companyLogo: string | null;
@@ -62,8 +74,9 @@ export interface Settings extends CalcParams {
   proposalValidityDays: number;
   nextProposalNumber: number;
   lastBackupAt: string | null;
-  /** Modelo de contrato importado. Fica só no aparelho: o repositório do app é público. */
-  contractTemplate: string | null;
+  company: CompanyData;
+  /** Modelo de contrato próprio, em Word (base64). Vazio usa o padrão do app. */
+  contractDocx: string | null;
   panelPowers: number[];
   /** Opções de folga além de 0, 10 e 20% */
   marginOptions: number[];

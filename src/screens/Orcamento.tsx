@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AlertTriangle, AudioWaveform, BadgeDollarSign, BatteryCharging, Check, ChevronDown, ChevronLeft, ChevronRight, CirclePause, CirclePlay, CirclePlus, Cpu, Grid2x2Plus, HandCoins, Plus, ReceiptText, Save, ScrollText, SlidersHorizontal, SquareStack, UtilityPole, Warehouse, X } from 'lucide-react';
+import { AlertTriangle, AudioWaveform, BadgeDollarSign, BatteryCharging, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, CirclePause, CirclePlay, CirclePlus, Cpu, FileUp, Grid2x2Plus, HandCoins, Plus, ReceiptText, Save, ScrollText, SlidersHorizontal, SquareStack, UtilityPole, Warehouse, X } from 'lucide-react';
 import { TopBar } from '../ui/chrome';
 import { useToast } from '../ui/kit';
 import { useStore } from '../data/store';
@@ -439,6 +439,10 @@ export default function Orcamento() {
               <div className="seg fg" role="group" aria-label="Folga de geração">
                 {([[0, 'Sem folga'], [10, '10%'], [20, '20%']] as const).map(([m, t]) => <button key={m} aria-pressed={p.safetyMargin === m} onClick={() => set({ params: { ...p, safetyMargin: m }, ...resetKit })}>{t}</button>)}
                 <button aria-pressed={customMargin} onClick={(e) => open('folga')(e.currentTarget.getBoundingClientRect())}>{customMargin ? `${p.safetyMargin}%` : 'Personalizado'}</button>
+              </div>
+              <div className="bill-links">
+                <button className="link-btn" onClick={() => toast('Leitura da fatura ainda não está pronta. Mande uma fatura de exemplo no chat.')}><FileUp size={14} />Importar fatura</button>
+                <button className="link-btn" onClick={() => toast('Leitura da fatura ainda não está pronta. Mande uma fatura de exemplo no chat.')}><Camera size={14} />Foto da fatura</button>
               </div>
               <button className="link-btn month-l" onClick={() => setSheet('monthly')}>{input.monthly ? `Média de ${input.monthly.filter((v) => v > 0).length} meses` : 'Média de 12 meses'}</button>
             </section>

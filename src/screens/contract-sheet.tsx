@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Field, Sheet, useToast } from '../ui/kit';
 import { useStore } from '../data/store';
-import { buildContract, contractMissing, defaultPayment } from '../core/contract';
+import { companyMissing, contractMissing, contractValues, defaultPayment } from '../core/contract';
 import { cepMask, documentMask } from '../core/format';
 import type { Lead, Proposal } from '../core/types';
 import { navigate } from '../router';
-import { DOCX_TYPE, deliverFile } from '../ui/deliver';
+import { deliverFile } from '../ui/deliver';
+import { contractFile } from './contract-file';
 
 export function ContractSheet({ open, onClose, lead, proposal }: { open: boolean; onClose: () => void; lead: Lead; proposal: Proposal | null }) {
   const { settings, updateLead } = useStore();
@@ -27,10 +28,11 @@ export function ContractSheet({ open, onClose, lead, proposal }: { open: boolean
     // shortcut: o texto do pagamento não fica salvo e volta ao padrão a cada geração; guardar se for preciso reemitir igual.
   }, [open, proposal, lead]);
 
-  if (!settings.contractTemplate) {
+  const noCompany = companyMissing(settings.company);
+  if (noCompany.length) {
     return (
       <Sheet open={open} onClose={onClose} title="Gerar contrato">
-        <p className="muted" style={{ fontSize: 14, lineHeight: 1.45 }}>Importe o modelo de contrato em Ajustes para gerar o PDF.</p>
+        <p className="muted" style={{ fontSize: 14, lineHeight: 1.45 }}>Preencha os dados da empresa em Ajustes. Falta: {noCompany.join(', ')}.</p>
         <div className="sheet-actions">
           <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
           <button className="btn btn-primary" onClick={() => { onClose(); navigate('/ajustes'); }}>Ir para Ajustes</button>
@@ -45,22 +47,12 @@ export function ContractSheet({ open, onClose, lead, proposal }: { open: boolean
   if (!payment.trim()) missing.push('forma de pagamento');
 
   async function generate(format: 'pdf' | 'word') {
-    if (!proposal || !settings.contractTemplate) return;
+    if (!proposal) return;
     setBusy(true);
     try {
       const next: Lead = { ...lead, ...data, ...(data.address !== lead.address ? { lat: null, lng: null } : {}) };
       await updateLead(lead.id, { document: next.document, birthDate: next.birthDate, cep: next.cep, address: next.address, lat: next.lat, lng: next.lng });
-      const blocks = buildContract(settings.contractTemplate, next, proposal, payment);
-      const name = `Contrato ${proposal.number} - ${lead.name}`;
-      let file: File;
-      if (format === 'word') {
-        const { blocksToDocx } = await import('../core/contract-docx');
-        file = new File([blocksToDocx(blocks).slice()], `${name}.docx`, { type: DOCX_TYPE });
-      } else {
-        const { contractPdf } = await import('../core/contract-pdf');
-        file = new File([(await contractPdf(blocks, settings.companyLogo)).output('blob')], `${name}.pdf`, { type: 'application/pdf' });
-      }
-      if ((await deliverFile(file, 'Contrato')) === 'downloaded') toast('Contrato baixado');
+      if ((await deliverFile(await contractFile(settings, next, proposal, payment, format), 'Contrato')) === 'downloaded') toast('Contrato baixado');
       onClose();
     } catch {
       toast('Não foi possível gerar o contrato');
@@ -79,10 +71,44 @@ export function ContractSheet({ open, onClose, lead, proposal }: { open: boolean
         <Field label="Forma de pagamento no contrato" htmlFor="ct-pay"><input id="ct-pay" className="input" value={payment} onChange={(e) => setPayment(e.target.value)} placeholder="à vista via banco" /></Field>
       </div>
       {missing.length > 0 && <p className="muted" style={{ fontSize: 13, marginTop: 10 }} role="status">Falta preencher: {missing.join(', ')}.</p>}
+      {proposal && missing.length === 0 && (() => {
+        const v = contractValues({ ...lead, ...data }, proposal, payment, settings.company);
+        const line = (k: string, value: string) => <div className="kv" key={k}><span className="k">{k}</span><span className="v num" style={{ textAlign: 'right', overflowWrap: 'anywhere', minWidth: 0 }}>{value}</span></div>;
+        return (
+          <>
+            <p className="section-title">Confira antes de gerar</p>
+            <div className="card pad">
+              <p className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Cliente</p>
+              {line('Nome', v.nome)}
+              {line('Dados', v.qualificacao)}
+              {line('Endereço', v.endereco)}
+            </div>
+            <div className="card pad mt-12">
+              <p className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Empresa</p>
+              {line('Razão social', v.empresa)}
+              {line('CNPJ', v.empresaCnpj)}
+              {line('Sede', v.empresaSede)}
+              {line('Representante', v.representante)}
+              {line('Foro', `${v.cidadeMaiuscula}-${v.uf}`)}
+              <button className="link-btn" style={{ marginTop: 6 }} onClick={() => { onClose(); navigate('/ajustes'); }}>Corrigir em Ajustes</button>
+            </div>
+            <div className="card pad mt-12">
+              <p className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Sistema e valor</p>
+              {line('Geração', `${v.geracao} kW/m e ${v.kwp} kWp`)}
+              {line('Módulos', `${v.modulos} × ${v.modulo}`)}
+              {line('Inversor', v.inversor)}
+              {line('Valor', v.valor)}
+              {line('Pagamento', v.pagamento)}
+              {line('Data', v.data)}
+            </div>
+            {!settings.companyLogo && <p className="muted" style={{ fontSize: 13, marginTop: 10 }}>O contrato sairá sem logo. Escolha a logo em Ajustes.</p>}
+          </>
+        );
+      })()}
       <div className="sheet-actions">
         <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
         <button className="btn btn-secondary" disabled={missing.length > 0 || busy} onClick={() => generate('word')}>Word</button>
-        <button className="btn btn-primary" disabled={missing.length > 0 || busy} onClick={() => generate('pdf')}>{busy ? 'Gerando…' : 'PDF'}</button>
+        <button className="btn btn-primary" disabled={missing.length > 0 || busy} onClick={() => generate('pdf')}>{busy ? 'Gerando…' : 'Gerar PDF'}</button>
       </div>
     </Sheet>
   );

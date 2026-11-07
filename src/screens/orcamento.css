@@ -219,3 +219,6 @@
   .orc .sc { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .orc .big strong { font-size: clamp(40px, 3vw, 56px); }
 }
+
+.orc .bill-links { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+.orc .bill-links .link-btn { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }

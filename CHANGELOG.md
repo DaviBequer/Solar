@@ -1,5 +1,14 @@
 # Versões
 
+## 3.1.1 — 7 de novembro de 2026
+
+- Contrato igual ao modelo em Word: mesmas fontes, margens, numeração, tabela, assinaturas e a logo no topo e no rodapé de cada página. Sai em PDF e em Word.
+- O contrato já vem pronto no app. Nova área Dados da empresa em Ajustes. Os dados do cliente vêm da ficha.
+- Antes de gerar, a tela mostra os dados do cliente, da empresa e do sistema para conferir.
+- O modelo pode ser exportado em Word, editado e importado de novo, ou voltar ao padrão.
+- Botões Importar fatura e Foto da fatura no Orçamento. A leitura entra quando chegar uma fatura de exemplo.
+- O app procura versão nova ao abrir, ao voltar para ele e a cada 5 minutos, e atualiza sozinho.
+
 ## 3.1.0 — 7 de novembro de 2026
 
 - Tela de Orçamento nova, como no protótipo aprovado: casa com o dia animado, ordem cliente, tipo, instalação e conta, casa, sistema, retorno e valor. Três colunas com a casa no meio em telas grandes.

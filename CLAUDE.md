@@ -9,3 +9,4 @@ Antes de começar, leia `PENDENCIAS.md`: ali está onde a última conversa parou
 - Dados no IndexedDB (`src/data/db.ts`). Mudou a estrutura? Mantenha a importação de backups antigos funcionando (`src/data/backup.ts`).
 - Textos da interface em português do Brasil, frases curtas, sem caixa alta. Exceção pedida pelo Davi: títulos pequenos e opções dos popups do Orçamento, como no app original.
 - O repositório é público: nunca colocar o modelo de contrato, backups ou dados de clientes na pasta. `npm run publicar` para se encontrar arquivo novo suspeito.
+- Terminou e testou: publique direto com `npm run publicar`. Pergunte antes só se a mudança for muito grande.
