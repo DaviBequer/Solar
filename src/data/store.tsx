@@ -6,6 +6,7 @@ import { uid } from '../core/format';
 import * as db from './db';
 import { buildBackup, restoreBackup, type Backup } from './backup';
 import { commissionAfterEdit } from '../core/sale';
+import { draftForClient } from '../core/quote';
 import { parseKitsCsv } from '../core/csv';
 import defaultKitsCsv from './default-kits.csv?raw';
 
@@ -32,7 +33,8 @@ interface StoreValue {
   deleteLead: (id: string) => Promise<void>;
   setDraft: (updater: (d: Draft) => Draft) => void;
   newDraft: (leadId?: string | null) => void;
-  openProposalInDraft: (p: Proposal) => void;
+  openProposalInDraft: (p: Proposal) => Promise<void>;
+  selectClient: (leadId: string) => Promise<void>;
   saveDraftAsProposal: () => Promise<Proposal | null>;
   setProposalStatus: (id: string, status: ProposalStatus) => Promise<void>;
   deleteProposal: (id: string) => Promise<void>;
@@ -203,15 +205,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setDraftState({ leadId, proposalId: null, input: newQuoteInput(settingsRef.current, prev) });
   }, []);
 
-  const openProposalInDraft = useCallback((p: Proposal) => {
-    setDraftState({ leadId: p.leadId, proposalId: p.id, input: structuredClone(p.input) });
-  }, []);
-
   const saveDraftAsProposal = useCallback(async () => {
     const d = draftRef.current;
     if (!d.leadId) return null;
     const result = calculate(d.input, kitsRef.current);
     const existing = d.proposalId ? (await db.get<Proposal>('proposals', d.proposalId)) : undefined;
+    // Nada mudou: não mexe na data nem na validade da proposta
+    if (existing && JSON.stringify([existing.input, existing.result]) === JSON.stringify([d.input, result])) return existing;
     let proposal: Proposal;
     if (existing) {
       proposal = { ...existing, input: structuredClone(d.input), result, updatedAt: now(), issuedAt: now() };
@@ -229,6 +229,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (lead && commission) await updateLead(lead.id, { commission });
     return proposal;
   }, [updateLead, updateSettings]);
+
+  /** Antes de sair do orçamento de um cliente, guarda o que foi mexido nele. */
+  const keepCurrentClient = useCallback(async () => {
+    const d = draftRef.current;
+    if (d.leadId && calculate(d.input, kitsRef.current).ready) await saveDraftAsProposal();
+  }, [saveDraftAsProposal]);
+
+  const openProposalInDraft = useCallback(async (p: Proposal) => {
+    if (draftRef.current.proposalId !== p.id) await keepCurrentClient();
+    setDraft(() => ({ leadId: p.leadId, proposalId: p.id, input: structuredClone(p.input) }));
+  }, [keepCurrentClient, setDraft]);
+
+  const selectClient = useCallback(async (leadId: string) => {
+    if (draftRef.current.leadId === leadId) return;
+    await keepCurrentClient();
+    const saved = await db.getAll<Proposal>('proposals');
+    setDraft((d) => draftForClient(d, leadId, saved, settingsRef.current));
+  }, [keepCurrentClient, setDraft]);
 
   const setProposalStatus = useCallback(async (id: string, status: ProposalStatus) => {
     const p = await db.get<Proposal>('proposals', id);
@@ -311,10 +329,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     () => ({
       ready, settings, kits, leads, proposals, tasks, draft,
       updateSettings, replaceKits, saveKit, deleteKit, createLead, updateLead, deleteLead,
-      setDraft, newDraft, openProposalInDraft, saveDraftAsProposal, setProposalStatus, deleteProposal, closeSale, undoSale,
+      setDraft, newDraft, openProposalInDraft, selectClient, saveDraftAsProposal, setProposalStatus, deleteProposal, closeSale, undoSale,
       saveTask, deleteTask, addAttachment, removeAttachment, fileUrl, exportBackup, importBackup,
     }),
-    [ready, settings, kits, leads, proposals, tasks, draft, updateSettings, replaceKits, saveKit, deleteKit, createLead, updateLead, deleteLead, setDraft, newDraft, openProposalInDraft, saveDraftAsProposal, setProposalStatus, deleteProposal, closeSale, undoSale, saveTask, deleteTask, addAttachment, removeAttachment, fileUrl, exportBackup, importBackup],
+    [ready, settings, kits, leads, proposals, tasks, draft, updateSettings, replaceKits, saveKit, deleteKit, createLead, updateLead, deleteLead, setDraft, newDraft, openProposalInDraft, selectClient, saveDraftAsProposal, setProposalStatus, deleteProposal, closeSale, undoSale, saveTask, deleteTask, addAttachment, removeAttachment, fileUrl, exportBackup, importBackup],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

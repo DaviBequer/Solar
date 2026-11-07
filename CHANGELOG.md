@@ -1,5 +1,13 @@
 # Versões
 
+## 3.0.6 — 7 de novembro de 2026
+
+- Cada cliente tem o seu orçamento. Ao escolher um cliente, abre o último salvo dele, com ancoragem, desconto e taxas. Cliente novo começa limpo, sem valores de outro.
+- Trocar de cliente, abrir outro orçamento ou começar outro guarda antes o que foi mexido. Gerar proposta sem mudança não altera a data da proposta.
+- Taxas deste cliente em Ajustar valor: spread, IOF, comissão, overprice e imposto.
+- Resultado para o cliente: Hoje, Com solar em dourado e Economia em verde.
+- Modelo de contrato importado em Word ou texto, e exportado em Word para editar. O contrato do cliente também sai em Word.
+
 ## 3.0.5 — 7 de novembro de 2026
 
 - Tabela de 65 kits já vem no app na primeira abertura. Para trocar, importe outra em Ajustes.

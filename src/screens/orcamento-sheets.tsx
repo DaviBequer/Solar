@@ -207,6 +207,8 @@ export function InstallSheet({ open, onClose, input, set }: { open: boolean; onC
 export function PriceSheet({ open, onClose, input, result, set }: { open: boolean; onClose: () => void; input: QuoteInput; result: QuoteResult; set: SetInput }) {
   const pr = input.pricing;
   const setPr = (patch: Partial<QuoteInput['pricing']>) => set({ pricing: { ...pr, ...patch } });
+  const p = input.params;
+  const setP = (patch: Partial<QuoteInput['params']>) => set({ params: { ...p, ...patch } });
   return (
     <Sheet open={open} onClose={onClose} title="Valor do projeto">
       <div className="seg white tall" role="group" aria-label="Como definir o valor">
@@ -234,6 +236,14 @@ export function PriceSheet({ open, onClose, input, result, set }: { open: boolea
         <div className="kv"><span className="k">Valor de tabela</span><span className="v num">{brl(result.tablePrice)}</span></div>
         <div className="kv"><span className="k">Desconto mostrado</span><span className="v num">{result.discountShown > 0 ? `−${brl(result.discountShown)}` : '—'}</span></div>
         <div className="kv total"><span className="k">Valor final</span><span className="v num">{brl(result.finalPrice)}</span></div>
+      </div>
+      <p className="section-title">Taxas deste cliente</p>
+      <div className="grid-2">
+        <Field label="Spread" htmlFor="tx-spread"><NumberField id="tx-spread" value={p.spread} onChange={(n) => setP({ spread: n })} suffix="%" /></Field>
+        <Field label="IOF" htmlFor="tx-iof"><NumberField id="tx-iof" value={p.iof} onChange={(n) => setP({ iof: n })} suffix="%" /></Field>
+        <Field label="Comissão" htmlFor="tx-com"><NumberField id="tx-com" value={p.commissionPct} onChange={(n) => setP({ commissionPct: n })} suffix="%" /></Field>
+        <Field label="Overprice" htmlFor="tx-over"><NumberField id="tx-over" value={p.overpriceSharePct} onChange={(n) => setP({ overpriceSharePct: n })} suffix="%" /></Field>
+        <Field label="Imposto" htmlFor="tx-imp"><NumberField id="tx-imp" value={p.taxPct} onChange={(n) => setP({ taxPct: n })} suffix="%" /></Field>
       </div>
       <div className="sheet-actions">
         <button className="btn btn-secondary" onClick={() => setPr({ mode: 'tabela', anchoring: 0, discount: 0, closedPrice: null })}>Zerar ajustes</button>

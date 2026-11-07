@@ -16,7 +16,7 @@ import { TaskSheet } from './task-sheet';
 type SheetName = 'more' | 'edit' | 'sale' | 'task' | 'proposal' | 'contract' | null;
 
 export default function Ficha({ id }: { id: string }) {
-  const { leads, proposals, tasks, updateLead, deleteLead, saveTask, newDraft, openProposalInDraft, setProposalStatus, deleteProposal, closeSale, undoSale } = useStore();
+  const { leads, proposals, tasks, updateLead, deleteLead, saveTask, selectClient, openProposalInDraft, setProposalStatus, deleteProposal, closeSale, undoSale } = useStore();
   const toast = useToast();
   const confirm = useConfirm();
   const lead = leads.find((l) => l.id === id);
@@ -172,7 +172,7 @@ export default function Ficha({ id }: { id: string }) {
           {phone ? <a href={whatsappUrl(phone)} target="_blank" rel="noreferrer"><MessageCircle size={20} />WhatsApp</a> : <button onClick={() => setSheet('edit')}><MessageCircle size={20} />WhatsApp</button>}
           {phone ? <a href={`tel:${phone}`}><Phone size={20} />Ligar</a> : <button onClick={() => setSheet('edit')}><Phone size={20} />Ligar</button>}
           {maps ? <a href={maps} target="_blank" rel="noreferrer"><Navigation size={20} />Rota</a> : <button onClick={() => setSheet('edit')}><Navigation size={20} />Rota</button>}
-          <button className="main" onClick={() => { newDraft(lead.id); navigate('/orcamento', true); }}><Sun size={20} />Orçamento</button>
+          <button className="main" onClick={async () => { await selectClient(lead.id); navigate('/orcamento', true); }}><Sun size={20} />Orçamento</button>
         </div>
 
         {next ? (

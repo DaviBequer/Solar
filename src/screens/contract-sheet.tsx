@@ -5,6 +5,7 @@ import { buildContract, contractMissing, defaultPayment } from '../core/contract
 import { cepMask, documentMask } from '../core/format';
 import type { Lead, Proposal } from '../core/types';
 import { navigate } from '../router';
+import { DOCX_TYPE, deliverFile } from '../ui/deliver';
 
 export function ContractSheet({ open, onClose, lead, proposal }: { open: boolean; onClose: () => void; lead: Lead; proposal: Proposal | null }) {
   const { settings, updateLead } = useStore();
@@ -43,32 +44,23 @@ export function ContractSheet({ open, onClose, lead, proposal }: { open: boolean
   const missing = contractMissing({ ...lead, ...data });
   if (!payment.trim()) missing.push('forma de pagamento');
 
-  async function generate() {
+  async function generate(format: 'pdf' | 'word') {
     if (!proposal || !settings.contractTemplate) return;
     setBusy(true);
     try {
       const next: Lead = { ...lead, ...data, ...(data.address !== lead.address ? { lat: null, lng: null } : {}) };
       await updateLead(lead.id, { document: next.document, birthDate: next.birthDate, cep: next.cep, address: next.address, lat: next.lat, lng: next.lng });
-      const { contractPdf } = await import('../core/contract-pdf');
-      const doc = await contractPdf(buildContract(settings.contractTemplate, next, proposal, payment), settings.companyLogo);
-      const blob = doc.output('blob');
-      const name = `Contrato ${proposal.number} - ${lead.name}.pdf`;
-      const file = new File([blob], name, { type: 'application/pdf' });
-      if (navigator.canShare?.({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: 'Contrato' });
-        } catch {
-          /* compartilhamento cancelado */
-        }
+      const blocks = buildContract(settings.contractTemplate, next, proposal, payment);
+      const name = `Contrato ${proposal.number} - ${lead.name}`;
+      let file: File;
+      if (format === 'word') {
+        const { blocksToDocx } = await import('../core/contract-docx');
+        file = new File([blocksToDocx(blocks).slice()], `${name}.docx`, { type: DOCX_TYPE });
       } else {
-        const url = URL.createObjectURL(blob);
-        const a = window.document.createElement('a');
-        a.href = url;
-        a.download = name;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 4000);
-        toast('Contrato baixado');
+        const { contractPdf } = await import('../core/contract-pdf');
+        file = new File([(await contractPdf(blocks, settings.companyLogo)).output('blob')], `${name}.pdf`, { type: 'application/pdf' });
       }
+      if (!(await deliverFile(file, 'Contrato'))) toast('Contrato baixado');
       onClose();
     } catch {
       toast('Não foi possível gerar o contrato');
@@ -89,7 +81,8 @@ export function ContractSheet({ open, onClose, lead, proposal }: { open: boolean
       {missing.length > 0 && <p className="muted" style={{ fontSize: 13, marginTop: 10 }} role="status">Falta preencher: {missing.join(', ')}.</p>}
       <div className="sheet-actions">
         <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-        <button className="btn btn-primary" disabled={missing.length > 0 || busy} onClick={generate}>{busy ? 'Gerando…' : 'Gerar PDF'}</button>
+        <button className="btn btn-secondary" disabled={missing.length > 0 || busy} onClick={() => generate('word')}>Word</button>
+        <button className="btn btn-primary" disabled={missing.length > 0 || busy} onClick={() => generate('pdf')}>{busy ? 'Gerando…' : 'PDF'}</button>
       </div>
     </Sheet>
   );

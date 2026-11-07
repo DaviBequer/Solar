@@ -4,12 +4,13 @@ import { Field, NumberField, Sheet, useConfirm, useToast } from '../ui/kit';
 import { useStore } from '../data/store';
 import { brl, num, phoneMask } from '../core/format';
 import { withSettings } from '../core/quote';
-import { templateProblem } from '../core/contract';
+import { parseTemplate, templateProblem } from '../core/contract';
 import type { Settings } from '../core/types';
 import { goBack, navigate } from '../router';
 import { parseBackup } from '../data/backup';
 import { askNotificationPermission } from '../reminders';
 import { APP_VERSION } from '../ui/chrome';
+import { DOCX_TYPE, deliverFile } from '../ui/deliver';
 
 type NumKey = { [K in keyof Settings]: Settings[K] extends number ? K : never }[keyof Settings];
 interface NumSpec { key: NumKey; label: string; prefix?: string; suffix?: string; decimals?: number }
@@ -154,6 +155,12 @@ export default function Ajustes() {
     }
   }
 
+  async function exportContract(template: string) {
+    const { blocksToDocx } = await import('../core/contract-docx');
+    await deliverFile(new File([blocksToDocx(parseTemplate(template)).slice()], 'Modelo de contrato.docx', { type: DOCX_TYPE }), 'Modelo de contrato');
+    toast('Modelo exportado');
+  }
+
   async function doRestore(f: File) {
     try {
       const b = parseBackup(await f.text());
@@ -217,18 +224,25 @@ export default function Ajustes() {
 
         <h2 className="section-title">Contrato</h2>
         <ul className="list">
-          <Row label="Modelo de contrato" sub="Fica só neste aparelho e entra no backup" value={settings.contractTemplate ? 'Importado' : <span className="muted">Não importado</span>} onClick={() => contractRef.current?.click()} />
+          <Row label="Importar modelo" sub="Word ou texto. Fica só neste aparelho e entra no backup" value={settings.contractTemplate ? 'Importado' : <span className="muted">Não importado</span>} onClick={() => contractRef.current?.click()} />
+          {settings.contractTemplate && <Row label="Exportar em Word" sub="Para editar e importar de novo" onClick={() => exportContract(settings.contractTemplate!)} />}
         </ul>
         <input
           ref={contractRef}
           type="file"
-          accept=".txt,text/plain"
+          accept=".docx,.txt,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           hidden
           onChange={async (e) => {
             const f = e.target.files?.[0];
             e.target.value = '';
             if (!f) return;
-            const text = await f.text();
+            let text: string;
+            try {
+              const { docxToTemplate } = await import('../core/contract-docx');
+              text = /\.docx$/i.test(f.name) ? await docxToTemplate(new Uint8Array(await f.arrayBuffer())) : await f.text();
+            } catch {
+              return toast('Não foi possível ler este arquivo');
+            }
             const problem = templateProblem(text);
             if (problem) return toast(problem);
             await updateSettings({ contractTemplate: text });

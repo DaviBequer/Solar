@@ -45,24 +45,8 @@ function qualification(lead: Lead): string {
   return `pessoa física, nascido(a) em ${d}/${m}/${y}, inscrito(a) no CPF nº ${doc}`;
 }
 
-export function buildContract(template: string, lead: Lead, proposal: Proposal, payment: string, today = new Date()): ContractBlock[] {
-  const r = proposal.result;
-  const values: Record<string, string> = {
-    nome: lead.name.trim(),
-    qualificacao: qualification(lead),
-    documento: lead.document ?? '',
-    endereco: `${lead.address.trim().replace(/[\s,.]+$/, '')}, CEP ${lead.cep}`,
-    geracao: num(r.generationKwh),
-    kwp: num(r.kWp, 2),
-    inversor: r.inverterLabel,
-    modulos: String(r.modules),
-    modulo: `${r.panelW} W ${proposal.input.moduleBrand}`,
-    valor: reais(r.finalPrice),
-    pagamento: payment.trim(),
-    data: today.toLocaleDateString('pt-BR'),
-  };
-  const fill = (s: string) => s.replace(/\{\{(.*?)\}\}/g, (_, f: string) => values[f] ?? '');
-
+/** Lê o texto do modelo em blocos. A conversão de campos vem de quem chama. */
+export function parseTemplate(template: string, fill: (line: string) => string = (s) => s): ContractBlock[] {
   const blocks: ContractBlock[] = [];
   for (const raw of template.split(/\r?\n/)) {
     const line = fill(raw.trim());
@@ -79,4 +63,23 @@ export function buildContract(template: string, lead: Lead, proposal: Proposal, 
     else blocks.push({ kind: 'para', text: line });
   }
   return blocks;
+}
+
+export function buildContract(template: string, lead: Lead, proposal: Proposal, payment: string, today = new Date()): ContractBlock[] {
+  const r = proposal.result;
+  const values: Record<string, string> = {
+    nome: lead.name.trim(),
+    qualificacao: qualification(lead),
+    documento: lead.document ?? '',
+    endereco: `${lead.address.trim().replace(/[\s,.]+$/, '')}, CEP ${lead.cep}`,
+    geracao: num(r.generationKwh),
+    kwp: num(r.kWp, 2),
+    inversor: r.inverterLabel,
+    modulos: String(r.modules),
+    modulo: `${r.panelW} W ${proposal.input.moduleBrand}`,
+    valor: reais(r.finalPrice),
+    pagamento: payment.trim(),
+    data: today.toLocaleDateString('pt-BR'),
+  };
+  return parseTemplate(template, (s) => s.replace(/\{\{(.*?)\}\}/g, (_, f: string) => values[f] ?? ''));
 }

@@ -33,7 +33,7 @@ export function Gauge({ consumption, generation, dark = false }: { consumption: 
 }
 
 export default function Orcamento() {
-  const { draft, setDraft, newDraft, kits, leads, proposals, saveDraftAsProposal, settings } = useStore();
+  const { draft, setDraft, newDraft, selectClient, kits, leads, proposals, saveDraftAsProposal, settings } = useStore();
   const toast = useToast();
   const [sheet, setSheet] = useState<SheetName>(null);
   const [afterPick, setAfterPick] = useState<null | 'save' | 'proposal'>(null);
@@ -70,7 +70,7 @@ export default function Orcamento() {
   }
 
   async function onPickClient(l: Lead) {
-    setDraft((d) => ({ ...d, leadId: l.id, proposalId: d.leadId === l.id ? d.proposalId : null }));
+    await selectClient(l.id);
     const intent = afterPick;
     setAfterPick(null);
     close();
@@ -106,7 +106,7 @@ export default function Orcamento() {
         <div className="page-head" style={{ paddingTop: 6 }}>
           <h1>{editing ? `Orçamento nº ${editing.number}` : 'Novo orçamento'}</h1>
           {(editing || input.billValue > 0) && (
-            <button className="link-btn" onClick={() => newDraft(null)}>Começar outro</button>
+            <button className="link-btn" onClick={async () => { if (lead && r.ready) await saveDraftAsProposal(); newDraft(lead?.id ?? null); }}>Começar outro</button>
           )}
         </div>
 
@@ -287,9 +287,9 @@ export default function Orcamento() {
           <>
             <h2 className="section-title">Resultado para o cliente</h2>
             <section className="card pad">
-              <div className="kv"><span className="k">Conta hoje</span><span className="v num">{brl(r.currentBill)}</span></div>
-              <div className="kv"><span className="k">Conta com energia solar</span><span className="v num">{brl(r.newBill)}</span></div>
-              <div className="kv"><span className="k">Economia por mês</span><span className="v num" style={{ fontWeight: 600 }}>{brl(r.monthlySavings)}</span></div>
+              <div className="kv"><span className="k">Hoje</span><span className="v num" style={{ fontWeight: 600 }}>{brl(r.currentBill)}</span></div>
+              <div className="kv"><span className="k">Com solar</span><span className="v num gold-text" style={{ fontWeight: 600 }}>{brl(r.newBill)}</span></div>
+              <div className="kv"><span className="k">Economia</span><span className="v num" style={{ fontWeight: 600, color: 'var(--ok)' }}>{brl(r.monthlySavings)}</span></div>
               <div className="kv"><span className="k">O sistema se paga em</span><span className="v">{monthsText(r.paybackMonths)}</span></div>
               <div className="kv"><span className="k">Em 25 anos</span><span className="v num">{brl(r.savings25y)}</span></div>
             </section>
