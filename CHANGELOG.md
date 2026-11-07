@@ -1,5 +1,12 @@
 # Versões
 
+## 3.1.6 — 7 de novembro de 2026
+
+- A casa é só a foto, com os painéis dela, mudando de dia para noite. Sem o desenho do inversor por cima.
+- A linha dos painéis segue o cano da foto até o inversor, e a da casa desce do inversor.
+- À noite não aparecem mais os dois traços dourados na janela, que pareciam o botão de pausa.
+- Hoje, Com solar e Economia: à vista compara com a conta com solar; financiado ou com entrada compara com a parcela. Só aparece se a economia passar de R$ 30.
+
 ## 3.1.5 — 7 de novembro de 2026
 
 - A casa do Orçamento agora é uma foto de verdade: casa térrea com muro, garagem e poste. Os painéis do orçamento ficam no telhado da foto, e o dia, a noite, o inversor, a bateria e o caminho da energia continuam animados.

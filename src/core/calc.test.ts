@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allowedKits, calculate, inverterSize, kitKw, installment, inverterLabel } from './calc';
+import { allowedKits, billCompare, calculate, inverterSize, kitKw, installment, inverterLabel } from './calc';
 import { DEFAULT_SETTINGS, newQuoteInput } from './defaults';
 import { kitsToCsv, parseKitsCsv, parseMoney } from './csv';
 import defaultKitsCsv from '../data/default-kits.csv?raw';
@@ -391,5 +391,15 @@ describe('padrão do orçamento', () => {
     const prev = { panelW: 585, moduleBrand: 'DMEGC', inverterBrand: 'SAJ' };
     expect(newQuoteInput({ ...DEFAULT_SETTINGS, defaultPanelW: 700, defaultModuleBrand: 'WEG', defaultInverterBrand: '' }, prev)).toMatchObject({ panelW: 700, moduleBrand: 'WEG', inverterBrand: '' });
     expect(newQuoteInput(DEFAULT_SETTINGS, prev)).toMatchObject(prev);
+  });
+});
+
+describe('comparação da conta', () => {
+  const r = { currentBill: 660, newBill: 46, installmentValue: 500 };
+  it('à vista compara com a conta com solar', () => expect(billCompare(r, 'vista')).toEqual({ label: 'Com solar', value: 46, savings: 614 }));
+  it('financiado compara com a parcela', () => expect(billCompare(r, 'financiado')).toEqual({ label: 'Parcela', value: 500, savings: 160 }));
+  it('some se a parcela passa da conta ou a economia não chega a R$ 30', () => {
+    expect(billCompare({ ...r, installmentValue: 700 }, 'financiado')).toBeNull();
+    expect(billCompare({ ...r, installmentValue: 630 }, 'entrada')).toBeNull();
   });
 });

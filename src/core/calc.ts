@@ -1,4 +1,4 @@
-import type { Grid, Kit, PanelW, QuoteInput, QuoteResult, Commission } from './types';
+import type { Grid, Kit, PanelW, PayMethod, QuoteInput, QuoteResult, Commission } from './types';
 import { GRID_LABEL, GRID_MIN_KWH } from './defaults';
 
 const PANELS: PanelW[] = [585, 610, 700];
@@ -341,4 +341,16 @@ export function calculate(input: QuoteInput, kits: Kit[]): QuoteResult {
       ? { existingKwh: Math.round(input.existing.modules * (input.existing.w / 1000) * p.productivity), totalModules: input.existing.modules + modules }
       : {}),
   };
+}
+
+/**
+ * Comparação da conta no Orçamento. À vista: hoje e com solar. Financiado ou com entrada: hoje e a parcela,
+ * porque o resto da conta com solar (iluminação pública) só se sabe pela fatura.
+ * Só aparece quando a economia passa de R$ 30.
+ */
+export function billCompare(r: Pick<QuoteResult, 'currentBill' | 'newBill' | 'installmentValue'>, method: PayMethod): { label: string; value: number; savings: number } | null {
+  const vista = method === 'vista';
+  const value = vista ? r.newBill : r.installmentValue;
+  const savings = r.currentBill - value;
+  return savings > 30 ? { label: vista ? 'Com solar' : 'Parcela', value, savings } : null;
 }

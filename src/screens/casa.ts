@@ -4,31 +4,10 @@ import photo from '../assets/casa.webp';
 
 /* Desenhos da tela de Orçamento: casa com o dia animado e gráfico de projeção. Só números entram nesses textos. */
 
-/*
- * Fundo é uma foto (casa térrea com muro, garagem e poste). Coordenadas abaixo em unidades do desenho:
- * a foto tem 2000 px de largura e cada pixel vale 0,36 unidade; um zoom de 1,25 aproxima a casa.
- * Os painéis da foto são cobertos por telha e trocados pelos do orçamento.
- */
-type Pt = [number, number];
-const ROOF: [Pt, Pt, Pt, Pt] = [[224.6, 105.8], [478.8, 107.3], [426.6, 133.9], [232.6, 134.6]];
-const COVER_MAIN = '221.8,103 485.3,104.4 485.3,121 432.7,122.4 431.3,136.6 229.7,137.2';
-const COVER_CARPORT = '427.6,142.8 484.6,142 535.4,166.6 451.4,176.4';
+/* Fundo: a foto pronta, com os painéis. Coordenadas em unidades do desenho: 1 px da foto (2000 px de largura) vale 0,36; o grupo aproxima 1,25×. */
 /** Bateria ao lado do inversor, desenhada em 32 × 36 e reduzida; a animação enche o nível dentro dela */
 export const BAT = { x: 312, y: 203, s: 0.62, w: 32, h: 36 };
 
-function panelCells(total: number, existing: number, type: string) {
-  const n = Math.min(total, 40), rows = n <= 8 ? 2 : n <= 18 ? 3 : n <= 30 ? 4 : 5, cols = Math.ceil(n / rows), old = type === 'ampliacao' ? Math.min(n, existing) : n;
-  const [tl, tr, br, bl] = ROOF;
-  const P = (u: number, v: number): Pt => { const top = [tl[0] + (tr[0] - tl[0]) * u, tl[1] + (tr[1] - tl[1]) * u], bot = [bl[0] + (br[0] - bl[0]) * u, bl[1] + (br[1] - bl[1]) * u]; return [+(top[0] + (bot[0] - top[0]) * v).toFixed(1), +(top[1] + (bot[1] - top[1]) * v).toFixed(1)]; };
-  let out = '';
-  for (let i = 0; i < n; i++) {
-    const r = Math.floor(i / cols), c = i % cols, g = .006, u0 = c / cols + g, u1 = (c + 1) / cols - g, v0 = r / rows + .03, v1 = (r + 1) / rows - .03;
-    const pts = [P(u0, v0), P(u1, v0), P(u1, v1), P(u0, v1)], novo = i >= old;
-    const m1 = P(u0, (v0 + v1) / 2), m2 = P(u1, (v0 + v1) / 2), k1 = P((u0 + u1) / 2, v0), k2 = P((u0 + u1) / 2, v1);
-    out += `<polygon points="${pts.map((q) => q.join(',')).join(' ')}" fill="${novo ? 'url(#pvn)' : 'url(#pv)'}" stroke="#C9D2E2" stroke-width=".5"/><path d="M${m1[0]} ${m1[1]}L${m2[0]} ${m2[1]}M${k1[0]} ${k1[1]}L${k2[0]} ${k2[1]}" stroke="#B9C8E2" stroke-opacity=".3" stroke-width=".35"/>`;
-  }
-  return out;
-}
 function battery(ghost: boolean, bats: number) {
   const { x, y, s, w, h } = BAT;
   const body = ghost
@@ -37,13 +16,10 @@ function battery(ghost: boolean, bats: number) {
   return `<g transform="translate(${x} ${y}) scale(${s})">${body}</g>`;
 }
 
-export function sceneSvg(total: number, existing: number, t: string, bats: number): string {
+export function sceneSvg(t: string, bats: number): string {
   const bat = t === 'bateria' ? battery(false, bats) : t === 'hibrido' ? battery(true, bats) : '';
-  return `<svg viewBox="0 0 720 400" role="img" aria-label="Casa térrea com ${total} painéis no telhado, inversor na parede ligado ao poste. Animação de um dia.">
+  return `<svg viewBox="0 0 720 400" role="img" aria-label="Casa térrea com painéis no telhado e inversor na parede ligado ao poste. Animação de um dia.">
   <defs>
-    <linearGradient id="pv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D5E98"/><stop offset=".55" stop-color="#1D3262"/><stop offset="1" stop-color="#132247"/></linearGradient>
-    <linearGradient id="pvn" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E3C377"/><stop offset="1" stop-color="#A9843A"/></linearGradient>
-    <pattern id="tile" width="6" height="4.2" patternUnits="userSpaceOnUse"><rect width="6" height="4.2" fill="#B8602F"/><path d="M0 4.200a3 3 0 0 1 6 0" fill="#CB7440"/><path d="M0 4.200a3 3 0 0 1 6 0" fill="none" stroke="#8E431D" stroke-width=".4"/></pattern>
     <linearGradient id="bg" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#0B8560"/><stop offset="1" stop-color="#4FCF9F"/></linearGradient>
     <linearGradient id="bb" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FAFBFC"/><stop offset="1" stop-color="#D5DAE3"/></linearGradient>
     <radialGradient id="sg"><stop offset="0" stop-color="#FFE9A8" stop-opacity=".95"/><stop offset=".3" stop-color="#FFD978" stop-opacity=".5"/><stop offset="1" stop-color="#FFD978" stop-opacity="0"/></radialGradient>
@@ -56,19 +32,14 @@ export function sceneSvg(total: number, existing: number, t: string, bats: numbe
   <g id="stars" fill="#fff" opacity="0"><circle cx="70" cy="30" r="1.5"/><circle cx="160" cy="62" r="1"/><circle cx="250" cy="24" r="1.3"/><circle cx="360" cy="44" r="1"/><circle cx="470" cy="20" r="1.5"/><circle cx="420" cy="70" r="1"/><circle cx="110" cy="80" r="1"/></g>
   <g id="moon" opacity="0"><circle cx="110" cy="44" r="16" fill="#F3F5FB"/><circle cx="117" cy="39" r="14" fill="#1A2747"/></g>
   <g id="sun"><circle r="70" fill="url(#sg)"/><circle r="18" fill="#FFD66B"/></g>
-  <g transform="translate(-101.5 14) scale(1.25)">
-  <polygon points="${COVER_MAIN}" fill="url(#tile)"/><polygon points="${COVER_CARPORT}" fill="url(#tile)"/>
-  ${panelCells(total, existing, t)}
-  </g>
 
   <rect id="night" x="0" y="0" width="720" height="400" fill="#0F1A36" opacity="0"/>
   <g transform="translate(-101.5 14) scale(1.25)">
-  <g id="glow" opacity="0"><ellipse cx="223" cy="190" rx="26" ry="18" fill="url(#wg)"/><rect x="216" y="181" width="5" height="18" fill="#FFDD87"/><rect x="224" y="181" width="5" height="18" fill="#FFDD87"/><ellipse cx="400" cy="214" rx="30" ry="24" fill="url(#wg)" opacity=".7"/><path d="M646 42L612 150H682z" fill="url(#lc)"/><circle cx="646" cy="41" r="4" fill="#FFF1C7"/></g>
-  <path id="f-pan" class="flow" d="M300 160V205" stroke="#C99A32"/>
-  <path id="f-house" class="flow" d="M291 218H272" stroke="#C99A32"/>
+  <g id="glow" opacity="0"><ellipse cx="223" cy="190" rx="26" ry="18" fill="url(#wg)"/><ellipse cx="400" cy="214" rx="30" ry="24" fill="url(#wg)" opacity=".7"/><path d="M646 42L612 150H682z" fill="url(#lc)"/><circle cx="646" cy="41" r="4" fill="#FFF1C7"/></g>
+  <path id="f-pan" class="flow" d="M347.800 157V230.500H302V227.500" stroke="#C99A32"/>
+  <path id="f-house" class="flow" d="M297.500 229V252" stroke="#C99A32"/>
   <path id="f-pole" class="flow" d="M309 210C380 196 500 150 578 92" stroke="#C99A32"/>
   ${t === 'bateria' ? '<path id="f-bat" class="flow" d="M309 218H312" stroke="#0B8560"/>' : ''}
-  <g><rect x="291" y="205" width="18" height="23" rx="2.5" fill="url(#bb)" stroke="#39465F" stroke-width=".9"/><rect x="293.500" y="208" width="13" height="8" rx="1" fill="#141C2E"/><path id="i-w" d="M295 212q1.200-2.400 2.400 0t2.400 0 2.400 0 2.400 0" fill="none" stroke="#E8C885" stroke-width=".8"/><circle id="led" cx="295.500" cy="222.500" r="1.5" fill="#16B883"/><path d="M299 222.500h7" stroke="#99A4B7" stroke-width="1.3" stroke-linecap="round"/></g>
   ${bat}
   </g>
   </svg>`;
@@ -111,7 +82,6 @@ function paint(h: number) {
   if (bf) bf.classList.toggle('rev', e.batUse);
   const lvl = g('b-lvl');
   if (lvl) { const H = BAT.h - 8, l = batLevel(h); lvl.setAttribute('y', (4 + H * (1 - l)).toFixed(1)); lvl.setAttribute('height', (H * l).toFixed(1)); }
-  g('led').setAttribute('fill', e.gen ? '#16B883' : '#E8C885');
   g('clock').textContent = `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor((h % 1) * 60 / 10) * 10).padStart(2, '0')}`;
   const st = statusAt(e, day.type);
   if (st !== lastStatus || !g('st').textContent) { lastStatus = st; g('st').textContent = st; }

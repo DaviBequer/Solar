@@ -3,7 +3,7 @@ import { AudioWaveform, BadgeDollarSign, BatteryCharging, CalendarDays, Camera, 
 import { TopBar } from '../ui/chrome';
 import { useToast } from '../ui/kit';
 import { useStore } from '../data/store';
-import { calculate, inverterBrandOf, inverterSize, installmentFor, kitKw } from '../core/calc';
+import { billCompare, calculate, inverterBrandOf, inverterSize, installmentFor, kitKw } from '../core/calc';
 import { GRID_LABEL, INSTALLMENT_OPTIONS, LEAD_STATUS_LABEL, PAY_LABEL, ROOF_LABEL, SYSTEM_LABEL } from '../core/defaults';
 import { brl, initials, monthsText, num, parseBR } from '../core/format';
 import { horizonYears, inverterSizes, pickInverter, stepKit } from '../core/quote';
@@ -168,9 +168,9 @@ function BillInput({ value, onChange, label }: { value: number; onChange: (n: nu
   );
 }
 
-function Scene({ total, existing, type, bats, generation, coverage }: { total: number; existing: number; type: SystemType; bats: number; generation: number; coverage: number }) {
+function Scene({ total, type, bats, generation, coverage }: { total: number; type: SystemType; bats: number; generation: number; coverage: number }) {
   const [playing, setPlaying] = useState(day.playing);
-  const svg = useMemo(() => ({ __html: sceneSvg(total, existing, type, bats) }), [total, existing, type, bats]);
+  const svg = useMemo(() => ({ __html: sceneSvg(type, bats) }), [type, bats]);
   day.type = type;
   useEffect(() => startDay(), []);
   return (
@@ -228,6 +228,7 @@ export default function Orcamento() {
   const years = horizonYears(r.paybackMonths);
   const projected = r.monthlySavings * 12 * years;
   const fixedMode = pr.mode === 'fixo' || pr.mode === 'fechado';
+  const cmp = billCompare(r, input.payment.method);
 
   const set = (patch: Partial<QuoteInput>) => setDraft((d) => ({ ...d, input: { ...d.input, ...patch } }));
   const setPr = (patch: Partial<QuoteInput['pricing']>) => set({ pricing: { ...pr, ...patch } });
@@ -469,7 +470,7 @@ export default function Orcamento() {
       </>
     ),
     scene: (
-            <Scene total={r.totalModules ?? r.modules} existing={existing.modules} type={input.systemType} bats={input.batteries} generation={(r.existingKwh ?? 0) + r.generationKwh} coverage={r.coverage} />
+            <Scene total={r.totalModules ?? r.modules} type={input.systemType} bats={input.batteries} generation={(r.existingKwh ?? 0) + r.generationKwh} coverage={r.coverage} />
     ),
     system: (
             <section className="pnl">
@@ -573,11 +574,13 @@ export default function Orcamento() {
                 </div>
               )}
               {input.payment.method === 'entrada' && <div className="two mt"><Labeled label="Entrada" fmt="brl" value={input.payment.downPayment} onChange={(n) => setPay({ downPayment: n })} /></div>}
-              <div className="tri">
-                <div className="hoje"><small>Hoje</small><b className="num">{brl(r.currentBill)}</b></div>
-                <div className="solar"><small>Com solar</small><b className="num">{brl(r.newBill)}</b></div>
-                <div className="eco"><small>Economia</small><b className="num">{brl(r.monthlySavings)}</b></div>
-              </div>
+              {cmp && (
+                <div className="tri">
+                  <div className="hoje"><small>Hoje</small><b className="num">{brl(r.currentBill)}</b></div>
+                  <div className="solar"><small>{cmp.label}</small><b className="num">{brl(cmp.value)}</b></div>
+                  <div className="eco"><small>Economia</small><b className="num">{brl(cmp.savings)}</b></div>
+                </div>
+              )}
             </section>
     ),
   };
