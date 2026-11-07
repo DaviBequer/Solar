@@ -1,5 +1,9 @@
 # Versões
 
+## 3.1.3 — 7 de novembro de 2026
+
+- Três clientes de exemplo, um à vista, um financiado e um com entrada e parcelas, cada um com orçamento pronto. Aparecem uma vez em cada aparelho e podem ser excluídos como qualquer cliente.
+
 ## 3.1.2 — 7 de novembro de 2026
 
 - Sem o aviso de backup ao abrir o app.

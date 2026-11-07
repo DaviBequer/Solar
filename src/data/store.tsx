@@ -9,6 +9,7 @@ import { commissionAfterEdit } from '../core/sale';
 import { draftForClient, keepOnLeave } from '../core/quote';
 import { parseKitsCsv } from '../core/csv';
 import defaultKitsCsv from './default-kits.csv?raw';
+import { demoData } from './demo';
 
 export interface Draft {
   leadId: string | null;
@@ -81,7 +82,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const [s, stored, l, p, t, d, seeded] = await Promise.all([
+      const [s, stored, l, p, t, d, seeded, demoSeeded] = await Promise.all([
         db.get<Settings>('kv', 'settings'),
         db.getAll<Kit>('kits'),
         db.getAll<Lead>('leads'),
@@ -89,6 +90,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         db.getAll<Task>('tasks'),
         db.get<Draft>('kv', 'draft'),
         db.get<boolean>('kv', 'kitsSeeded'),
+        db.get<boolean>('kv', 'demoSeeded'),
       ]);
       // Tabela nativa só na primeira abertura: quem já tem kits, ou apagou a tabela depois, não recebe de novo
       let k = stored;
@@ -99,7 +101,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
         await db.put('kv', true, 'kitsSeeded');
       }
-      const st = { ...DEFAULT_SETTINGS, ...(s ?? {}) };
+      let st = { ...DEFAULT_SETTINGS, ...(s ?? {}) };
+      // Clientes de exemplo só uma vez por aparelho: excluídos, não voltam
+      if (!demoSeeded) {
+        const demo = demoData(st, k);
+        await db.putMany('leads', demo.leads);
+        await db.putMany('proposals', demo.proposals);
+        st = { ...st, nextProposalNumber: st.nextProposalNumber + demo.proposals.length };
+        await db.put('kv', st, 'settings');
+        await db.put('kv', true, 'demoSeeded');
+        l.push(...demo.leads);
+        p.push(...demo.proposals);
+      }
       setSettings(st);
       setKits(k);
       setLeads(l);
