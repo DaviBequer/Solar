@@ -95,6 +95,7 @@ function Viewer({ att, url, onClose, onDelete }: { att: Attachment; url: string;
       <div className="bar">
         <button className="btn btn-danger" onClick={onDelete}><Trash2 size={17} />Apagar</button>
         <a className="btn btn-secondary" href={url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>Abrir</a>
+        <a className="btn btn-secondary" href={url} download={att.name} style={{ textDecoration: 'none' }}>Baixar</a>
         <button className="btn btn-secondary" onClick={onClose}><X size={17} />Fechar</button>
       </div>
     </div>

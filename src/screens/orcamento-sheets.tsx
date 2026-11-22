@@ -3,7 +3,7 @@ import { CirclePlus, Search } from 'lucide-react';
 import { Field, NumberField, Sheet } from '../ui/kit';
 import { useStore } from '../data/store';
 import type { Lead, QuoteInput } from '../core/types';
-import { initials, MONTHS_SHORT, num, phoneMask } from '../core/format';
+import { initials, num, phoneMask } from '../core/format';
 
 type SetInput = (patch: Partial<QuoteInput>) => void;
 
@@ -90,15 +90,15 @@ export function MonthlySheet({ open, onClose, input, set }: { open: boolean; onC
   const avg = filled.length ? filled.reduce((a, b) => a + b, 0) / filled.length : 0;
   return (
     <Sheet open={open} onClose={onClose} title="Média de consumo">
-      <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>Digite o consumo em kWh de cada mês da conta. Meses em branco ficam de fora da média.</p>
+      <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>Consumo em kWh de cada mês, do mais recente ao mais antigo, como na fatura. Meses em branco ficam de fora da média.</p>
       <div className="months">
-        {MONTHS_SHORT.map((m, i) => (
+        {vals.map((_, i) => (
           <NumberField
-            key={m}
+            key={i}
             value={vals[i]}
             decimals={0}
-            prefix={m}
-            label={`Consumo de ${m} em kWh`}
+            prefix={`Mês ${i + 1}`}
+            label={`Consumo do mês ${i + 1} em kWh`}
             onChange={(n) => setVals((v) => v.map((x, j) => (j === i ? n : x)))}
           />
         ))}

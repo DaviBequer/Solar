@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AudioWaveform, BadgeDollarSign, BatteryCharging, CalendarDays, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, CirclePlus, Cpu, FileUp, Grid2x2Plus, HandCoins, Pause, Play, Plus, ReceiptText, Save, ScrollText, SlidersHorizontal, UtilityPole, Warehouse, X } from 'lucide-react';
+import { AudioWaveform, BadgeDollarSign, BatteryCharging, CalendarDays, Camera, Check, ChevronDown, ChevronLeft, ChevronRight, CirclePlus, Cpu, FileUp, Grid2x2Plus, HandCoins, Pause, Play, Plus, ReceiptText, RotateCcw, Save, ScrollText, SlidersHorizontal, UtilityPole, Warehouse, X } from 'lucide-react';
 import { TopBar } from '../ui/chrome';
 import { useMedia, useToast } from '../ui/kit';
 import { useStore } from '../data/store';
@@ -12,6 +12,7 @@ import { navigate, useLayer } from '../router';
 import { day, projectionSvg, sceneSvg, startDay, whenPaid } from './casa';
 import { ClientPicker, MonthlySheet } from './orcamento-sheets';
 import { shrinkPhoto } from '../ui/images';
+import { readBill } from './read-bill';
 import './orcamento.css';
 
 type PopName = 'grid' | 'roof' | 'brand' | 'power' | 'inverter' | 'ibrand' | 'folga' | 'inst' | 'carport';
@@ -83,13 +84,13 @@ function Popup({ name, anchor, edit, onEdit, onClose, children }: { name: PopNam
   );
 }
 
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+function Modal({ title, onClose, onReset, children }: { title: string; onClose: () => void; onReset?: () => void; children: ReactNode }) {
   useLayer(true, onClose);
   return (
     <div className="ov">
       <div className="ov-bg" onClick={onClose} />
       <div className="ov-p" role="dialog" aria-modal="true" aria-label={title}>
-        <div className="ov-h"><h2>{title}</h2><button className="x" aria-label="Fechar" onClick={onClose}><X size={18} /></button></div>
+        <div className="ov-h"><h2>{title}</h2><span style={{ display: 'flex', gap: 8 }}>{onReset && <button className="x" aria-label="Voltar ao valor da tabela" title="Voltar ao valor da tabela" onClick={onReset}><RotateCcw size={17} /></button>}<button className="x" aria-label="Fechar" onClick={onClose}><X size={18} /></button></span></div>
         {children}
       </div>
     </div>
@@ -200,8 +201,6 @@ export default function Orcamento() {
   const [busy, setBusy] = useState(false);
   const [pop, setPop] = useState<{ name: PopName; anchor: DOMRect; edit: boolean } | null>(null);
   const [panel, setPanel] = useState<'info' | 'com' | null>(null);
-  const [tab, setTab] = useState<'neg' | 'fix'>('neg');
-  const [preview, setPreview] = useState<'auto' | 'manual'>('manual');
   const [custom, setCustom] = useState({ final: 0, discount: 0 });
   const wide = useMedia('(min-width: 1340px)'); // três colunas, como no CSS
 
@@ -215,7 +214,6 @@ export default function Orcamento() {
   const p = input.params;
   const years = horizonYears(r.paybackMonths);
   const projected = r.monthlySavings * 12 * years;
-  const fixedMode = pr.mode === 'fixo' || pr.mode === 'fechado';
   const cmp = billCompare(r, input.payment.method);
 
   const set = (patch: Partial<QuoteInput>) => setDraft((d) => ({ ...d, input: { ...d.input, ...patch } }));
@@ -247,16 +245,29 @@ export default function Orcamento() {
     else toast(editing ? 'Orçamento atualizado' : 'Orçamento salvo');
   }
 
-  /** Fatura enviada pelo cliente: fica nos anexos dele. A leitura dos números vem quando houver uma fatura de exemplo. */
+  /** Fatura enviada pelo cliente: fica nos anexos dele com o nome completo do cliente. */
   async function attachBill(file: File, to: Lead) {
     billFile.current = null;
-    await addAttachment(to.id, await shrinkPhoto(file));
-    toast(`Fatura salva nos anexos de ${to.name.split(' ')[0]}`);
+    const f = await shrinkPhoto(file);
+    const ext = f.type === 'application/pdf' ? 'pdf' : f.type === 'image/jpeg' ? 'jpg' : (f.name.split('.').pop() || 'jpg');
+    await addAttachment(to.id, new File([f], `Fatura ${to.name.trim()}.${ext}`, { type: f.type }));
   }
 
   async function onBill(file: File | undefined) {
     if (!file) return;
-    if (lead) return attachBill(file, lead);
+    // Lê o histórico de consumo da fatura em PDF e preenche os meses
+    const kwh = await readBill(file).catch(() => []);
+    if (kwh.length) {
+      const avg = kwh.reduce((a, b) => a + b, 0) / kwh.length;
+      set({ monthly: [...kwh, ...Array(12 - kwh.length).fill(0)], billMode: 'kwh', billValue: Math.round(avg), ...resetKit });
+    }
+    const read = kwh.length ? `Consumo de ${kwh.length} ${kwh.length === 1 ? 'mês' : 'meses'} lido da fatura` : file.type === 'application/pdf' ? 'Não achei o consumo nesta fatura' : '';
+    if (lead) {
+      await attachBill(file, lead);
+      toast([read, `fatura salva nos anexos de ${lead.name.split(' ')[0]}`].filter(Boolean).join('. ').replace(/^f/, 'F'));
+      return;
+    }
+    if (read) toast(read);
     billFile.current = file;
     setSheet('client');
   }
@@ -265,7 +276,7 @@ export default function Orcamento() {
     setSheet(null);
     setBusy(true);
     await selectClient(l.id);
-    if (billFile.current) await attachBill(billFile.current, l);
+    if (billFile.current) { await attachBill(billFile.current, l); toast(`Fatura salva nos anexos de ${l.name.split(' ')[0]}`); }
     const intent = afterPick;
     setAfterPick(null);
     const saved = intent ? await saveDraftAsProposal() : null;
@@ -523,7 +534,7 @@ export default function Orcamento() {
                   <button aria-label="Detalhes do projeto" aria-pressed={panel === 'info'} onClick={() => setPanel(panel === 'info' ? null : 'info')}><ReceiptText size={16} /></button>
                   <button aria-label="Meus ganhos" aria-pressed={panel === 'com'} onClick={() => setPanel(panel === 'com' ? null : 'com')}><HandCoins size={16} /></button>
                   <button aria-label="Definir valor do projeto" onClick={() => { setCustom({ final: Math.round(r.finalPrice), discount: r.discountShown }); setSheet('custom'); }}><BadgeDollarSign size={16} /></button>
-                  <button aria-label="Configurar proposta" onClick={() => { setTab('neg'); setSheet('config'); }}><SlidersHorizontal size={16} /></button>
+                  <button aria-label="Configurar proposta" onClick={() => setSheet('config')}><SlidersHorizontal size={16} /></button>
                 </div>
               </div>
               {panel === 'info' && (
@@ -610,52 +621,18 @@ export default function Orcamento() {
       )}
 
       {sheet === 'custom' && (
-        <Modal title="Definir valor do projeto" onClose={() => setSheet(null)}>
+        <Modal title="Valor do projeto" onClose={() => setSheet(null)} onReset={() => { setPr({ mode: 'tabela', closedPrice: null, shownDiscount: 0, anchoring: 0, discount: 0, discountOff: false }); setSheet(null); toast('Valor da tabela de volta'); }}>
           <div className="stackf">
             <Labeled label="Valor do projeto" fmt="brl" value={custom.final} onChange={(n) => setCustom({ ...custom, final: n })} />
-            <Labeled label="Desconto mostrado" fmt="brl" value={custom.discount} onChange={(n) => setCustom({ ...custom, discount: n })} />
+            <Labeled label="Desconto mostrado (opcional)" fmt="brl" value={custom.discount} onChange={(n) => setCustom({ ...custom, discount: n })} />
           </div>
-          <div className="kv mt"><span>Valor cheio</span><b className="num">{brl(custom.final + custom.discount)}</b></div>
-          <div className="btn2">
-            <button className="sec" onClick={() => { setPr({ mode: 'tabela', closedPrice: null, shownDiscount: 0, discountOff: false }); setSheet(null); }}>Limpar</button>
-            <button className="ok" onClick={() => { setPr({ mode: 'definido', closedPrice: custom.final, shownDiscount: custom.discount, discountOff: false }); setSheet(null); }}>Confirmar</button>
-          </div>
+          {custom.discount > 0 && <div className="kv mt"><span>Valor cheio</span><b className="num">{brl(custom.final + custom.discount)}</b></div>}
+          <button className="ok" onClick={() => { setPr({ mode: 'definido', closedPrice: custom.final, shownDiscount: custom.discount, discountOff: false }); setSheet(null); }}>Confirmar</button>
         </Modal>
       )}
 
       {sheet === 'config' && (
-        <Modal title="Configurar proposta" onClose={() => setSheet(null)}>
-          <div className="seg">
-            <button aria-pressed={tab === 'neg'} onClick={() => setTab('neg')}>Negociação</button>
-            <button aria-pressed={tab === 'fix'} onClick={() => setTab('fix')}>Taxas fixas</button>
-          </div>
-          {tab === 'neg' ? (
-            <>
-              <div className="prev">
-                <div className="prev-h">
-                  <small>Valor final do projeto</small>
-                  <div className="seg mini">
-                    <button aria-pressed={!fixedMode && preview === 'auto'} onClick={() => { setPreview('auto'); setPr({ mode: 'tabela', closedPrice: null, discountOff: false }); }}>Auto</button>
-                    <button aria-pressed={!fixedMode && preview === 'manual'} onClick={() => { setPreview('manual'); setPr({ mode: 'tabela', closedPrice: null, discountOff: false }); }}>Manual</button>
-                    <button aria-pressed={fixedMode} onClick={() => setPr({ mode: 'fixo', closedPrice: pr.closedPrice || Math.round(r.finalPrice), discountOff: false })}>Fixo</button>
-                  </div>
-                </div>
-                {fixedMode ? <UF className="prev-i" label="Valor fixo" fmt="brl" value={pr.closedPrice ?? 0} onChange={(n) => setPr({ mode: 'fixo', closedPrice: n || null })} />
-                  : preview === 'auto' ? <UF className="prev-i" label="Valor final" fmt="brl" value={Math.round(r.finalPrice)} onChange={(n) => setPr({ discount: Math.max(0, r.basePrice + pr.anchoring - n), discountOff: false })} />
-                    : <b className="prev-i num" style={{ display: 'block' }}>{brl(r.finalPrice)}</b>}
-                <small className="prev-f">{fixedMode ? 'Valor fixo, sem desconto nem ancoragem' : preview === 'auto' ? 'O desconto se ajusta sozinho' : 'Calculado pela ancoragem e pelo desconto'}</small>
-              </div>
-              {!fixedMode && (
-                <>
-                  <div className="hrow mt"><span className="lbl">Ajuste fino</span><button className="sec-s" onClick={() => setPr({ anchoring: 0, discount: 0 })}>Zerar</button></div>
-                  <div className="two">
-                    <Labeled label="Ancoragem" fmt="brl" value={pr.anchoring} onChange={(n) => setPr({ anchoring: n })} />
-                    <Labeled label="Desconto" fmt="brl" value={pr.discount} onChange={(n) => setPr({ discount: n })} />
-                  </div>
-                </>
-              )}
-            </>
-          ) : (
+        <Modal title="Taxas fixas" onClose={() => setSheet(null)}>
             <div className="two mt">
               <Labeled label="Spread" fmt="pct" value={p.spread} onChange={(n) => setP({ spread: n })} />
               <Labeled label="IOF" fmt="pct" value={p.iof} onChange={(n) => setP({ iof: n })} />
@@ -665,13 +642,12 @@ export default function Orcamento() {
               <Labeled label="Overprice" fmt="pct" value={p.overpriceSharePct} onChange={(n) => setP({ overpriceSharePct: n })} />
               <Labeled label="Imposto" fmt="pct" value={p.taxPct} onChange={(n) => setP({ taxPct: n })} />
             </div>
-          )}
           <button className="ok" onClick={() => setSheet(null)}>Aplicar</button>
         </Modal>
       )}
 
       <ClientPicker open={sheet === 'client'} onClose={() => { setAfterPick(null); billFile.current = null; setSheet(null); }} onPick={onPickClient} />
-      <MonthlySheet key={`${draft.proposalId}-${draft.leadId}-${input.monthly ? 'm' : 'n'}`} open={sheet === 'monthly'} onClose={() => setSheet(null)} input={input} set={set} />
+      <MonthlySheet key={`${draft.proposalId}-${draft.leadId}-${input.monthly?.join() ?? 'n'}`} open={sheet === 'monthly'} onClose={() => setSheet(null)} input={input} set={set} />
     </div>
   );
 }

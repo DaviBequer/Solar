@@ -211,7 +211,7 @@ textarea.input { height: auto; min-height: 84px; padding: 12px 14px; resize: ver
 .private { background: var(--tint); border-radius: 16px; padding: 12px 14px; display: flex; gap: 12px; align-items: center; }
 .private .lock { width: 36px; height: 36px; border-radius: 10px; background: var(--surface); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .months { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.months .input { height: 44px; text-align: right; padding: 0 10px 0 38px; }
+.months .input { height: 44px; text-align: right; padding: 0 10px 0 54px; }
 .months .input-wrap .prefix { font-size: 12px; left: 10px; }
 
 /* ---------- clientes ---------- */

@@ -1,5 +1,12 @@
 # Versões
 
+## 3.1.9 — 22 de novembro de 2026
+
+- Importar fatura em PDF da Celesc lê o histórico de consumo e preenche os meses sozinho. Dá para editar em Média de consumo.
+- Os meses agora são Mês 1, Mês 2… do mais recente ao mais antigo, como na fatura.
+- A fatura fica nos anexos com o nome completo do cliente, e o anexo ganhou o botão Baixar.
+- Valor do projeto mais simples: só o valor e o desconto mostrado, opcional. O ícone ao lado do X volta ao valor da tabela. Saíram Auto, Manual e Fixo; a engrenagem ficou só com as taxas fixas.
+
 ## 3.1.8 — 7 de novembro de 2026
 
 - Proposta nova em duas páginas, a versão 2 escolhida. Página 1: faixa do cliente com CPF, telefone e endereço da ficha, foto da casa, a conta de luz no período (10, 12 ou 15 anos, conforme o retorno) e o fechamento. Página 2: o projeto com o desenho dos módulos, a economia em 1, 3, 5 anos e no período, as formas de pagamento, Depois do sim e garantias.
