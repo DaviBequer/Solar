@@ -1,5 +1,9 @@
 # Versões
 
+## 3.1.11 — 22 de novembro de 2026
+
+- Proposta: nova linha Economia na conta entre a conta sem solar e o sistema, para a conta fechar: economia menos sistema dá o que fica com você. É o mesmo valor da economia no período na página 2.
+
 ## 3.1.10 — 22 de novembro de 2026
 
 - A leitura da fatura também funciona sem internet.

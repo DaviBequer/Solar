@@ -63,7 +63,8 @@ describe('proposta em duas páginas', () => {
     const vista = planChoices(p, [])[0];
     const s = proposalStory(p, vista);
     expect(s.billTotal).toBeCloseTo(p.result.currentBill * 12 * s.years);
-    expect(s.keep).toBeCloseTo(p.result.monthlySavings * 12 * s.years - p.result.finalPrice);
+    expect(s.keep).toBeCloseTo(s.savingsTotal - p.result.finalPrice);
+    expect(s.savingsTotal).toBe(s.marks[3].value);
     expect(s.marks.map((m) => m.years)).toEqual([1, 3, 5, s.years]);
   });
 });

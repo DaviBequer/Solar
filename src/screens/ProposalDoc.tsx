@@ -91,6 +91,7 @@ export const ProposalDoc = forwardRef<HTMLDivElement, Props>(function ProposalDo
         </div>
         <div>
           <div className="pd-hb"><span>Conta de luz sem solar</span><span className="t"><i style={{ width: '100%', background: '#A8352B' }} /></span><b>{brl(s.billTotal)}</b></div>
+          <div className="pd-hb"><span>Economia na conta</span><span className="t"><i style={{ width: `${Math.min(100, (s.savingsTotal / s.billTotal) * 100)}%`, background: '#C4A462' }} /></span><b>{brl(s.savingsTotal)}</b></div>
           <div className="pd-hb"><span>{mainPlan.key === 'vista' ? 'Sistema, pago uma vez' : `Sistema, ${mainPlan.label.toLowerCase()}`}</span><span className="t"><i style={{ width: `${Math.min(100, (s.systemTotal / s.billTotal) * 100)}%`, background: '#1B2A49' }} /></span><b>{brl(s.systemTotal)}</b></div>
           {s.keep > 0 && <div className="pd-hb win"><span>Fica com você</span><span className="t"><i style={{ width: `${Math.min(100, (s.keep / s.billTotal) * 100)}%`, background: '#0A7654' }} /></span><b>{brl(s.keep)}</b></div>}
         </div>

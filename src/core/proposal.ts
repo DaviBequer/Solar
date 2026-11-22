@@ -98,6 +98,7 @@ export function proposalStory(proposal: Proposal, main: PlanChoice) {
     years,
     payback,
     billTotal,
+    savingsTotal,
     systemTotal: main.total,
     keep: savingsTotal - main.total,
     marks: [1, 3, 5, years].map((y) => ({ years: y, value: r.monthlySavings * 12 * y })),
