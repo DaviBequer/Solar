@@ -1,5 +1,9 @@
 # Versões
 
+## 3.1.10 — 22 de novembro de 2026
+
+- A leitura da fatura também funciona sem internet.
+
 ## 3.1.9 — 22 de novembro de 2026
 
 - Importar fatura em PDF da Celesc lê o histórico de consumo e preenche os meses sozinho. Dá para editar em Média de consumo.
